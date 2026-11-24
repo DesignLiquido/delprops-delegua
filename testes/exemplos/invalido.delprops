@@ -1,0 +1,6 @@
+liquido.arquetipo = 'spa'
+liquido.roteador.porta = 'oito mil'
+liquido.roteador.inexistente = verdadeiro
+liquido.roteador.cors = talvez
+liquido.roteador.porta = 3000
+linha sem separador

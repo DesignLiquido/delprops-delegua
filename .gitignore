@@ -1,0 +1,8 @@
+# Pacotes instalados pela Pacoteca (testes/exemplos/pacotes é parte dos testes).
+/pacotes/
+
+# Cobertura de testes.
+cobertura/
+coverage/
+
+CLAUDE.md

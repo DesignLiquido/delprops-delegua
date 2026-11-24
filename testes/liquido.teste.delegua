@@ -1,0 +1,102 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var liquido = importar("../fontes/liquido.delegua")
+var tipos = importar("../fontes/tipos.delegua")
+var auxiliares = importar("./auxiliares.delegua")
+
+// Verifica campos obrigatórios e tipos de todas as definições de um esquema.
+funcao verificarDefinicoes(definicoes) {
+    afirmar.verdadeiro(definicoes.tamanho() > 0)
+    para (var i = 0; i < definicoes.tamanho(); i = i + 1) {
+        var definicao = definicoes[i]
+        afirmar.verdadeiro(definicao.nome != "")
+        afirmar.verdadeiro(definicao.detalhe != "")
+        afirmar.verdadeiro(tipos.ehTipoValor(definicao.tipoValor))
+    }
+}
+
+funcao verificar(definicoes, nome, tipoValor, valorPadrao) {
+    var definicao = auxiliares.porNome(definicoes, nome)
+    afirmar.diferente(nulo, definicao)
+    afirmar.igual(tipoValor, definicao.tipoValor)
+    se (valorPadrao != nulo) { afirmar.igual(valorPadrao, definicao.valorPadrao) }
+}
+
+grupo("Esquemas do Líquido", funcao() {
+    teste("tipos de valor", funcao() {
+        afirmar.igual("logico,texto,numero", tipos.tiposValor().juntar(","))
+        afirmar.falso(tipos.ehTipoValor("data"))
+    })
+
+    teste("espaços de nomes na ordem de exibição", funcao() {
+        afirmar.igual(
+            "liquido.arquetipo,liquido.linguagem,liquido.aplicacao,liquido.roteador,liquido.dados,liquido.autenticacao,liquido.estilos",
+            liquido.esquemas().chaves().juntar(",")
+        )
+    })
+
+    teste("arquetipo", funcao() {
+        var definicoes = liquido.arquetipo()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(1, definicoes.tamanho())
+        verificar(definicoes, "arquetipo", "texto", nulo)
+        afirmar.igual("rest,mvc", definicoes[0].valoresPermitidos.juntar(","))
+    })
+
+    teste("linguagem", funcao() {
+        var definicoes = liquido.linguagem()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(1, definicoes.tamanho())
+        afirmar.igual("delégua,pituguês", definicoes[0].valoresPermitidos.juntar(","))
+    })
+
+    teste("aplicacao", funcao() {
+        var definicoes = liquido.aplicacao()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(5, definicoes.tamanho())
+        para cada nome em ["nome", "versao", "descricao", "licenca.nome", "licenca.url"] {
+            verificar(definicoes, nome, "texto", nulo)
+        }
+    })
+
+    teste("roteador", funcao() {
+        var definicoes = liquido.roteador()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(9, definicoes.tamanho())
+        verificar(definicoes, "diretorioEstatico", "texto", "'publico'")
+        verificar(definicoes, "cors", "logico", "falso")
+        verificar(definicoes, "bodyParser", "logico", "verdadeiro")
+        verificar(definicoes, "morgan", "logico", "falso")
+        verificar(definicoes, "cookieParser", "logico", "verdadeiro")
+        verificar(definicoes, "passport", "logico", "falso")
+        verificar(definicoes, "json", "logico", "verdadeiro")
+        verificar(definicoes, "helmet", "logico", "verdadeiro")
+        verificar(definicoes, "porta", "numero", "3000")
+    })
+
+    teste("dados", funcao() {
+        var definicoes = liquido.dados()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(9, definicoes.tamanho())
+        afirmar.igual("sqlite,mysql,postgres,mongodb,mssql", auxiliares.porNome(definicoes, "tecnologia").valoresPermitidos.juntar(","))
+        para cada nome em ["caminho", "host", "usuario", "senha", "banco", "arquivoInicializacao"] {
+            verificar(definicoes, nome, "texto", nulo)
+        }
+        verificar(definicoes, "porta", "numero", nulo)
+        verificar(definicoes, "autoInicializar", "logico", nulo)
+    })
+
+    teste("autenticacao", funcao() {
+        var definicoes = liquido.autenticacao()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(1, definicoes.tamanho())
+        afirmar.igual("jwt", definicoes[0].valoresPermitidos.juntar(","))
+    })
+
+    teste("estilos", funcao() {
+        var definicoes = liquido.estilos()
+        verificarDefinicoes(definicoes)
+        afirmar.igual(1, definicoes.tamanho())
+        verificar(definicoes, "diretorioBase", "texto", "'publico/css'")
+    })
+})

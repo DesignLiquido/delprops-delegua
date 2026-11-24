@@ -1,0 +1,84 @@
+// Registro de esquemas contribuídos por pacotes, agrupados por espaço de nomes.
+//
+// O registro é um objeto, e não estado do módulo: cada `importar` de um arquivo cria uma
+// instância nova do módulo, então variáveis de módulo não são compartilhadas entre quem
+// importa. Crie um registro com `criarRegistro()` e passe-o adiante (por exemplo, para
+// `descobrir`).
+importar tudo como modelos de "./modelos.delegua"
+
+classe RegistroEsquemas {
+    // Espaço de nomes → vetor de ContribuicaoEsquema.
+    registros: dicionário
+
+    construtor() {
+        isto.registros = {}
+    }
+
+    // Registra o esquema de propriedades de um pacote para um espaço de nomes.
+    //
+    // Exemplo:
+    //     registro.registrar("liquido.dados", "lincones-sqlite", definicoes)
+    registrar(espacoNomes, pacote, definicoes) {
+        se (nao isto.registros.contem(espacoNomes)) {
+            // Por uma variável local: um vetor literal atribuído direto a um índice de
+            // dicionário é liberado no fim da função.
+            var novas = []
+            isto.registros[espacoNomes] = novas
+        }
+        var contribuicoes = isto.registros[espacoNomes]
+        contribuicoes.adicionar(modelos.ContribuicaoEsquema(pacote, definicoes))
+    }
+
+    // Todas as definições registradas para o espaço de nomes, de todos os pacotes.
+    obter(espacoNomes) {
+        var definicoes = []
+        se (nao isto.registros.contem(espacoNomes)) { retorna definicoes }
+        var contribuicoes = isto.registros[espacoNomes]
+        para (var i = 0; i < contribuicoes.tamanho(); i = i + 1) {
+            var contribuicao = contribuicoes[i]
+            para (var j = 0; j < contribuicao.definicoes.tamanho(); j = j + 1) {
+                definicoes.adicionar(contribuicao.definicoes[j])
+            }
+        }
+        retorna definicoes
+    }
+
+    // Verdadeiro se ao menos um pacote registrou esquema para o espaço de nomes.
+    temRegistro(espacoNomes) {
+        retorna isto.registros.contem(espacoNomes) e isto.registros[espacoNomes].tamanho() > 0
+    }
+
+    // O dicionário completo: espaço de nomes → vetor de ContribuicaoEsquema.
+    obterTodos() {
+        retorna isto.registros
+    }
+
+    // Esquemas no formato aceito por `validar`: espaço de nomes → definições.
+    obterEsquemas() {
+        var esquemas = {}
+        var espacos = isto.registros.chaves()
+        para (var i = 0; i < espacos.tamanho(); i = i + 1) {
+            esquemas[espacos[i]] = isto.obter(espacos[i])
+        }
+        retorna esquemas
+    }
+
+    // Verdadeiro se o pacote já contribuiu para o espaço de nomes.
+    pacoteRegistrado(espacoNomes, pacote) {
+        se (nao isto.registros.contem(espacoNomes)) { retorna falso }
+        var contribuicoes = isto.registros[espacoNomes]
+        para (var i = 0; i < contribuicoes.tamanho(); i = i + 1) {
+            se (contribuicoes[i].pacote == pacote) { retorna verdadeiro }
+        }
+        retorna falso
+    }
+
+    // Remove todos os registros.
+    limpar() {
+        isto.registros = {}
+    }
+}
+
+funcao criarRegistro() {
+    retorna RegistroEsquemas()
+}

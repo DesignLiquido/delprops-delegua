@@ -1,0 +1,197 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var validador = importar("../fontes/validador.delegua")
+var modelos = importar("../fontes/modelos.delegua")
+
+// Vetores literais vão por variáveis locais: atribuídos direto a um índice de dicionário,
+// o interpretador os libera no fim da função.
+funcao esquemasTeste() {
+    var roteador = [
+        modelos.DefinicaoPropriedade("cors", "logico", "Habilita CORS.", "falso", nulo),
+        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", "3000", nulo),
+        modelos.DefinicaoPropriedade("diretorioEstatico", "texto", "Diretório estático.", "'publico'", nulo)
+    ]
+    var dados = [
+        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["sqlite", "mysql"]),
+        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", nulo, nulo)
+    ]
+    var autenticacao = [
+        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["jwt"])
+    ]
+    var arquetipo = [
+        modelos.DefinicaoPropriedade("arquetipo", "texto", "Arquétipo.", nulo, ["rest", "mvc"])
+    ]
+    var esquemas = {}
+    esquemas["liquido.roteador"] = roteador
+    esquemas["liquido.dados"] = dados
+    esquemas["liquido.autenticacao"] = autenticacao
+    esquemas["liquido.arquetipo"] = arquetipo
+    retorna esquemas
+}
+
+funcao validarUma(chave, valor) {
+    var propriedades = [modelos.PropriedadeCompreendida(chave, valor, 1)]
+    retorna validador.validar(propriedades, esquemasTeste())
+}
+
+grupo("Validador: inferirTipo", funcao() {
+    teste("lógicos", funcao() {
+        afirmar.igual("logico", validador.inferirTipo("verdadeiro"))
+        afirmar.igual("logico", validador.inferirTipo("falso"))
+    })
+
+    teste("textos entre aspas simples", funcao() {
+        afirmar.igual("texto", validador.inferirTipo("'abc'"))
+        afirmar.igual("texto", validador.inferirTipo("'com espaços'"))
+        afirmar.igual("texto", validador.inferirTipo("''"))
+    })
+
+    teste("números", funcao() {
+        afirmar.igual("numero", validador.inferirTipo("3000"))
+        afirmar.igual("numero", validador.inferirTipo("0"))
+        afirmar.igual("numero", validador.inferirTipo("-5"))
+        afirmar.igual("numero", validador.inferirTipo("3.14"))
+        afirmar.igual("numero", validador.inferirTipo("-0.5"))
+        afirmar.igual("numero", validador.inferirTipo("0.0"))
+    })
+
+    teste("valores sem tipo conhecido", funcao() {
+        afirmar.nulo(validador.inferirTipo("talvez"))
+        afirmar.nulo(validador.inferirTipo("'"))
+        afirmar.nulo(validador.inferirTipo("'aberto"))
+        afirmar.nulo(validador.inferirTipo("\"duplas\""))
+        afirmar.nulo(validador.inferirTipo("1."))
+        afirmar.nulo(validador.inferirTipo(".5"))
+        afirmar.nulo(validador.inferirTipo("-"))
+        afirmar.nulo(validador.inferirTipo("1e5"))
+    })
+})
+
+grupo("Validador: valorSemAspas", funcao() {
+    teste("remove aspas simples", funcao() {
+        afirmar.igual("abc", validador.valorSemAspas("'abc'"))
+        afirmar.igual("", validador.valorSemAspas("''"))
+    })
+
+    teste("mantém valores sem aspas ou com aspa isolada", funcao() {
+        afirmar.igual("abc", validador.valorSemAspas("abc"))
+        afirmar.igual("'", validador.valorSemAspas("'"))
+        afirmar.igual("'abc", validador.valorSemAspas("'abc"))
+    })
+})
+
+grupo("Validador: validar", funcao() {
+    teste("aceita lógico, número e texto corretos", funcao() {
+        var propriedades = [
+            modelos.PropriedadeCompreendida("liquido.roteador.cors", "verdadeiro", 1),
+            modelos.PropriedadeCompreendida("liquido.roteador.porta", "8080", 2),
+            modelos.PropriedadeCompreendida("liquido.roteador.diretorioEstatico", "'estaticos'", 3)
+        ]
+        var resultado = validador.validar(propriedades, esquemasTeste())
+        afirmar.igual(0, resultado.avisos.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("valida liquido.dados com sub-espaço dinâmico", funcao() {
+        var resultado = validarUma("liquido.dados.lincones.tecnologia", "'sqlite'")
+        afirmar.igual(0, resultado.avisos.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+        var semPropriedade = validarUma("liquido.dados.lincones", "'sqlite'")
+        afirmar.igual(1, semPropriedade.avisos.tamanho())
+        afirmar.verdadeiro(semPropriedade.avisos[0].mensagem.inclui("sem nome de propriedade"))
+    })
+
+    teste("ignora espaços de nomes desconhecidos", funcao() {
+        var resultado = validarUma("outroProjeto.qualquer", "talvez")
+        afirmar.igual(0, resultado.avisos.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("não confunde prefixo parcial com espaço de nomes", funcao() {
+        var resultado = validarUma("liquido.roteadores.cors", "talvez")
+        afirmar.igual(0, resultado.avisos.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("informa tipo incompatível", funcao() {
+        var resultado = validarUma("liquido.roteador.porta", "'oito mil'")
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.igual("liquido.roteador.porta", resultado.erros[0].chave)
+        afirmar.igual("Tipo esperado 'numero', mas o valor ''oito mil'' parece ser 'texto'.", resultado.erros[0].mensagem)
+    })
+
+    teste("informa valor fora dos permitidos", funcao() {
+        var resultado = validarUma("liquido.autenticacao.tecnologia", "'oauth'")
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.igual("Valor 'oauth' não está entre os permitidos: [jwt].", resultado.erros[0].mensagem)
+        var aceito = validarUma("liquido.autenticacao.tecnologia", "'jwt'")
+        afirmar.igual(0, aceito.erros.tamanho())
+    })
+
+    teste("avisa propriedade desconhecida", funcao() {
+        var resultado = validarUma("liquido.roteador.inexistente", "verdadeiro")
+        afirmar.igual(1, resultado.avisos.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+        afirmar.igual("Propriedade 'inexistente' desconhecida no espaço de nomes 'liquido.roteador'.", resultado.avisos[0].mensagem)
+    })
+
+    teste("informa valor sem tipo conhecido", funcao() {
+        var resultado = validarUma("liquido.roteador.cors", "talvez")
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.verdadeiro(resultado.erros[0].mensagem.inclui("não corresponde a nenhum tipo conhecido"))
+    })
+
+    teste("avisa chave igual ao espaço de nomes sem propriedade de mesmo nome", funcao() {
+        var resultado = validarUma("liquido.roteador", "verdadeiro")
+        afirmar.igual(1, resultado.avisos.tamanho())
+        afirmar.igual("Espaço de nomes 'liquido.roteador' sem nome de propriedade.", resultado.avisos[0].mensagem)
+    })
+
+    teste("valida chave igual ao espaço de nomes contra a propriedade de mesmo nome", funcao() {
+        var aceito = validarUma("liquido.arquetipo", "'mvc'")
+        afirmar.igual(0, aceito.avisos.tamanho())
+        afirmar.igual(0, aceito.erros.tamanho())
+        var recusado = validarUma("liquido.arquetipo", "'spa'")
+        afirmar.igual(1, recusado.erros.tamanho())
+    })
+
+    teste("prefere o espaço de nomes mais específico", funcao() {
+        var esquemas = esquemasTeste()
+        var generico = [modelos.DefinicaoPropriedade("roteador.cors", "texto", "Genérico.", nulo, nulo)]
+        esquemas["liquido"] = generico
+        var propriedades = [modelos.PropriedadeCompreendida("liquido.roteador.cors", "verdadeiro", 1)]
+        var resultado = validador.validar(propriedades, esquemas)
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("une valores permitidos de definições repetidas", funcao() {
+        var esquemas = esquemasTeste()
+        var dados = esquemas["liquido.dados"]
+        dados.adicionar(modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["duckdb"]))
+        var propriedades = [
+            modelos.PropriedadeCompreendida("liquido.dados.a.tecnologia", "'sqlite'", 1),
+            modelos.PropriedadeCompreendida("liquido.dados.b.tecnologia", "'duckdb'", 2),
+            modelos.PropriedadeCompreendida("liquido.dados.c.tecnologia", "'oracle'", 3)
+        ]
+        var resultado = validador.validar(propriedades, esquemas)
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.igual(3, resultado.erros[0].linha)
+        afirmar.igual("Valor 'oracle' não está entre os permitidos: [sqlite, mysql, duckdb].", resultado.erros[0].mensagem)
+    })
+
+    teste("processa várias propriedades com resultados diferentes", funcao() {
+        var propriedades = [
+            modelos.PropriedadeCompreendida("liquido.roteador.cors", "verdadeiro", 1),
+            modelos.PropriedadeCompreendida("liquido.roteador.porta", "'abc'", 2),
+            modelos.PropriedadeCompreendida("liquido.roteador.novo", "1", 3),
+            modelos.PropriedadeCompreendida("liquido.dados.x.tecnologia", "'oracle'", 4),
+            modelos.PropriedadeCompreendida("outro.coisa", "1", 5)
+        ]
+        var resultado = validador.validar(propriedades, esquemasTeste())
+        afirmar.igual(1, resultado.avisos.tamanho())
+        afirmar.igual(3, resultado.avisos[0].linha)
+        afirmar.igual(2, resultado.erros.tamanho())
+        afirmar.igual(2, resultado.erros[0].linha)
+        afirmar.igual(4, resultado.erros[1].linha)
+    })
+})

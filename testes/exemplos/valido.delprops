@@ -1,0 +1,8 @@
+// Configuração de exemplo
+liquido.arquetipo = 'mvc'
+liquido.linguagem = 'delégua'
+liquido.roteador.porta = 8080
+liquido.roteador.cors = verdadeiro
+liquido.dados.principal.tecnologia = 'sqlite'
+liquido.dados.principal.caminho = ':memory:'
+outroProjeto.qualquer = 'sem validação'

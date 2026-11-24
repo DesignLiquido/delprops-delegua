@@ -1,0 +1,9 @@
+// Tipos de valor aceitos nas propriedades de um arquivo .delprops.
+
+funcao tiposValor() {
+    retorna ["logico", "texto", "numero"]
+}
+
+funcao ehTipoValor(tipoValor) {
+    retorna tiposValor().inclui(tipoValor)
+}

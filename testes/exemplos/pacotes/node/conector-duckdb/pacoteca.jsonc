@@ -1,0 +1,6 @@
+{
+  "nome": "conector-duckdb",
+  "versao": "0.1.0",
+  // Contribuição para o espaço de nomes liquido.dados
+  "delprops": { "espacoNomes": "liquido.dados", "esquema": "delprops/dados.json" }
+}

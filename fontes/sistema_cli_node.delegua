@@ -1,0 +1,74 @@
+// Sistema da linha de comando para a realização node, sobre as bibliotecas `arquivos`,
+// `argumentos` e `processo`.
+//
+// `escreva` sempre termina a linha, então a saída é acumulada e escrita de uma vez em
+// `encerrar`, sem a quebra de linha final.
+importar tudo como arquivos de "arquivos"
+importar tudo como argumentosProcesso de "argumentos"
+importar tudo como processo de "processo"
+importar tudo como textos de "./utilidades/texto.delegua"
+
+funcao semQuebraFinal(conteudo) {
+    se (textos.terminaCom(conteudo, "\n")) { retorna conteudo.subtexto(0, conteudo.tamanho() - 1) }
+    retorna conteudo
+}
+
+classe SistemaCliNode {
+    argumentos: vetor
+    saida: texto
+    erro: texto
+
+    construtor(argumentos) {
+        isto.argumentos = argumentos
+        isto.saida = ""
+        isto.erro = ""
+    }
+
+    lerArquivo(caminho) {
+        retorna arquivos.lerTexto(caminho)
+    }
+
+    diretorioAtual() {
+        retorna arquivos.diretorioAtual()
+    }
+
+    juntarCaminhos(base, parte) {
+        retorna arquivos.juntarCaminhos(base, parte)
+    }
+
+    resolverCaminho(base, caminho) {
+        retorna arquivos.caminhoAbsoluto(arquivos.juntarCaminhos(base, caminho))
+    }
+
+    escreverSaida(conteudo) {
+        isto.saida = isto.saida + conteudo
+    }
+
+    escreverErro(conteudo) {
+        isto.erro = isto.erro + conteudo
+    }
+
+    descarregar() {
+        se (isto.erro != "") { processo.escreverErro(semQuebraFinal(isto.erro)) }
+        se (isto.saida != "") { escreva(semQuebraFinal(isto.saida)) }
+        isto.erro = ""
+        isto.saida = ""
+    }
+
+    encerrar(codigo) {
+        isto.descarregar()
+        processo.sair(codigo)
+    }
+
+    existe(caminho) {
+        retorna arquivos.existe(caminho)
+    }
+}
+
+// Sistema com os argumentos do processo atual.
+funcao sistemaCliNode() {
+    var lista = []
+    var todos: vetor = argumentosProcesso.argumentos
+    para (var i = 0; i < todos.tamanho(); i = i + 1) { lista.adicionar("" + todos[i]) }
+    retorna SistemaCliNode(lista)
+}

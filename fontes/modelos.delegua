@@ -1,0 +1,183 @@
+// Estruturas de dados do DelProps.
+//
+// São classes, e não dicionários, porque o interpretador desembrulha um dicionário com a
+// chave "valor" quando ele é devolvido por uma função, e as propriedades têm essa chave.
+importar tudo como tipos de "./tipos.delegua"
+
+// Definição de uma propriedade em um esquema. `valorPadrao` (na sintaxe do .delprops) e
+// `valoresPermitidos` são opcionais: use `nulo` quando ausentes.
+classe DefinicaoPropriedade {
+    nome: texto
+    tipoValor: texto
+    detalhe: texto
+    valorPadrao: texto
+    valoresPermitidos: vetor
+
+    construtor(nome, tipoValor, detalhe, valorPadrao, valoresPermitidos) {
+        isto.nome = nome
+        isto.tipoValor = tipoValor
+        isto.detalhe = detalhe
+        isto.valorPadrao = valorPadrao
+        isto.valoresPermitidos = valoresPermitidos
+    }
+}
+
+// Esquema contribuído por um pacote para um espaço de nomes.
+classe ContribuicaoEsquema {
+    pacote: texto
+    definicoes: vetor
+
+    construtor(pacote, definicoes) {
+        isto.pacote = pacote
+        isto.definicoes = definicoes
+    }
+}
+
+// Uma linha `chave = valor` compreendida. `valor` é o texto bruto (com aspas, se houver).
+classe PropriedadeCompreendida {
+    chave: texto
+    valor: texto
+    linha: número
+
+    construtor(chave, valor, linha) {
+        isto.chave = chave
+        isto.valor = valor
+        isto.linha = linha
+    }
+}
+
+// Erro de sintaxe encontrado durante a compreensão.
+classe ErroCompreensao {
+    mensagem: texto
+    linha: número
+
+    construtor(mensagem, linha) {
+        isto.mensagem = mensagem
+        isto.linha = linha
+    }
+}
+
+classe ResultadoCompreensao {
+    propriedades: vetor
+    erros: vetor
+
+    construtor(propriedades, erros) {
+        isto.propriedades = propriedades
+        isto.erros = erros
+    }
+}
+
+// Aviso de validação (propriedade desconhecida).
+classe AvisoValidacao {
+    chave: texto
+    linha: número
+    mensagem: texto
+
+    construtor(chave, linha, mensagem) {
+        isto.chave = chave
+        isto.linha = linha
+        isto.mensagem = mensagem
+    }
+}
+
+// Erro de validação (tipo ou valor inválido).
+classe ErroValidacao {
+    chave: texto
+    linha: número
+    mensagem: texto
+
+    construtor(chave, linha, mensagem) {
+        isto.chave = chave
+        isto.linha = linha
+        isto.mensagem = mensagem
+    }
+}
+
+classe ResultadoValidacao {
+    avisos: vetor
+    erros: vetor
+
+    construtor(avisos, erros) {
+        isto.avisos = avisos
+        isto.erros = erros
+    }
+}
+
+// Entrada devolvida por `listarDiretorio` de um sistema de arquivos de descoberta.
+classe EntradaDiretorio {
+    nome: texto
+    ehDiretorio: lógico
+
+    construtor(nome, ehDiretorio) {
+        isto.nome = nome
+        isto.ehDiretorio = ehDiretorio
+    }
+}
+
+// Opções da linha de comando. Campos ausentes ficam `nulo`.
+classe OpcoesCli {
+    comando: texto
+    caminhoArquivo: texto
+    caminhoEsquemas: texto
+    nomePropriedade: texto
+    erro: texto
+
+    construtor(comando) {
+        isto.comando = comando
+        isto.caminhoArquivo = nulo
+        isto.caminhoEsquemas = nulo
+        isto.nomePropriedade = nulo
+        isto.erro = nulo
+    }
+}
+
+funcao ehTexto(valor) {
+    retorna valor != nulo e tipo de valor == "texto"
+}
+
+funcao ehVetor(valor) {
+    se (valor == nulo) { retorna falso }
+    var tipoValor = "" + (tipo de valor)
+    retorna tipoValor == "vetor" ou tipoValor.terminaCom("[]")
+}
+
+funcao ehDicionario(valor) {
+    se (valor == nulo) { retorna falso }
+    var tipoValor = tipo de valor
+    retorna tipoValor == "dicionário" ou tipoValor == "dicionario"
+}
+
+// Cria uma DefinicaoPropriedade a partir de um dicionário (por exemplo, lido de JSON).
+// Devolve `nulo` se faltar `nome`, `tipo` ou `detalhe`, ou se o tipo for desconhecido.
+funcao definicaoDeDicionario(dados) {
+    se (nao ehDicionario(dados)) { retorna nulo }
+    var nome = dados["nome"]
+    var tipoValor = dados["tipo"]
+    var detalhe = dados["detalhe"]
+    se (nao ehTexto(nome) ou nao ehTexto(tipoValor) ou nao ehTexto(detalhe)) { retorna nulo }
+    se (nao tipos.ehTipoValor(tipoValor)) { retorna nulo }
+    var valorPadrao = nulo
+    se (ehTexto(dados["padrao"])) { valorPadrao = dados["padrao"] }
+    var permitidos = nulo
+    var permitidosLidos = dados["valoresPermitidos"]
+    se (ehVetor(permitidosLidos)) {
+        permitidos = []
+        para (var i = 0; i < permitidosLidos.tamanho(); i = i + 1) {
+            var item = permitidosLidos[i]
+            se (ehTexto(item)) { permitidos.adicionar(item) }
+        }
+    }
+    retorna DefinicaoPropriedade(nome, tipoValor, detalhe, valorPadrao, permitidos)
+}
+
+// Cria um vetor de DefinicaoPropriedade a partir de um vetor de dicionários,
+// ignorando itens inválidos.
+funcao definicoesDeVetor(dados) {
+    var definicoes = []
+    se (nao ehVetor(dados)) { retorna definicoes }
+    para (var i = 0; i < dados.tamanho(); i = i + 1) {
+        var definicao = definicaoDeDicionario(dados[i])
+        se (definicao != nulo) { definicoes.adicionar(definicao) }
+    }
+    retorna definicoes
+}

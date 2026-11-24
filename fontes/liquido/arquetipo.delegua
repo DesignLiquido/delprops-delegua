@@ -1,0 +1,8 @@
+// Propriedades de liquido.arquetipo.
+importar tudo como modelos de "../modelos.delegua"
+
+funcao definicoes() {
+    retorna [
+        modelos.DefinicaoPropriedade("arquetipo", "texto", "Arquétipo do projeto Líquido.", nulo, ["rest", "mvc"])
+    ]
+}

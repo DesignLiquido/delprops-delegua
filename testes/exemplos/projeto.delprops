@@ -1,0 +1,4 @@
+meuProjeto.modo = 'lento'
+meuProjeto.limite = 10
+liquido.dados.banco.tecnologia = 'duckdb'
+liquido.dados.banco.extensao = 'parquet'

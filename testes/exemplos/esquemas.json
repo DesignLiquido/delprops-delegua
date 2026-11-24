@@ -1,0 +1,7 @@
+{
+    // Esquemas adicionais de exemplo (JSONC)
+    "meuProjeto": [
+        { "nome": "modo", "tipo": "texto", "detalhe": "Modo de execução.", "valoresPermitidos": ["rapido", "lento"], "padrao": "'rapido'" },
+        { "nome": "limite", "tipo": "numero", "detalhe": "Limite de itens." }
+    ]
+}

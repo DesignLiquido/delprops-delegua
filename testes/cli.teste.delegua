@@ -1,0 +1,200 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var cli = importar("../fontes/cli.delegua")
+var modelos = importar("../fontes/modelos.delegua")
+var json = importar("../fontes/utilidades/json.delegua")
+var arquivosSistema = importar("arquivos")
+var auxiliares = importar("./auxiliares.delegua")
+
+// Executa a linha de comando com os argumentos e arquivos dados e devolve o sistema falso.
+funcao executar(argumentos, arquivos, esquemasAdicionais) {
+    var sistema = auxiliares.sistemaCli(argumentos, arquivos)
+    var codigo = cli.executarCli(sistema, esquemasAdicionais)
+    afirmar.igual(codigo, sistema.codigo)
+    retorna sistema
+}
+
+funcao comArquivo(caminho, conteudo) {
+    var arquivos = {}
+    arquivos[caminho] = conteudo
+    retorna arquivos
+}
+
+funcao esquemasAdicionais() {
+    var definicoes = [modelos.DefinicaoPropriedade("modo", "texto", "Modo do meu projeto.", "'rapido'", ["rapido", "lento"])]
+    var esquemas = {}
+    esquemas["meuProjeto"] = definicoes
+    retorna esquemas
+}
+
+grupo("Linha de comando: ajuda e versão", funcao() {
+    teste("mostra a ajuda sem argumentos e com --ajuda", funcao() {
+        var semArgumentos = executar([], {}, nulo)
+        afirmar.igual(0, semArgumentos.codigo)
+        afirmar.verdadeiro(semArgumentos.saida.inclui("Uso:"))
+        afirmar.verdadeiro(semArgumentos.saida.inclui("validar <caminho>"))
+        var comOpcao = executar(["--ajuda"], {}, nulo)
+        afirmar.igual(semArgumentos.saida, comOpcao.saida)
+    })
+
+    teste("mostra a versão com --versao e -v", funcao() {
+        var longa = executar(["--versao"], {}, nulo)
+        afirmar.igual(0, longa.codigo)
+        afirmar.igual("delprops v" + cli.versao() + "\n", longa.saida)
+        afirmar.igual(longa.saida, executar(["-v"], {}, nulo).saida)
+    })
+
+    teste("a versão é a do pacoteca.jsonc", funcao() {
+        var manifesto = json.analisarJsonc(arquivosSistema.lerTexto("pacoteca.jsonc"))
+        afirmar.igual("", manifesto["erro"])
+        afirmar.igual(manifesto["resultado"]["versao"], cli.versao())
+    })
+
+    teste("informa comando desconhecido e sugere a ajuda", funcao() {
+        var sistema = executar(["inventado"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("Comando desconhecido: 'inventado'.\n", sistema.erro)
+        afirmar.verdadeiro(sistema.saida.inclui("delprops --ajuda"))
+    })
+})
+
+grupo("Linha de comando: esquemas e info", funcao() {
+    teste("lista os espaços de nomes embutidos", funcao() {
+        var sistema = executar(["esquemas"], {}, nulo)
+        afirmar.igual(0, sistema.codigo)
+        para cada espaco em ["liquido.arquetipo", "liquido.linguagem", "liquido.aplicacao", "liquido.roteador", "liquido.dados", "liquido.autenticacao", "liquido.estilos"] {
+            afirmar.verdadeiro(sistema.saida.inclui("  " + espaco + ":"))
+        }
+        afirmar.verdadeiro(sistema.saida.inclui("    • cors (logico) (padrão: falso)"))
+        afirmar.verdadeiro(sistema.saida.inclui("    • arquetipo (texto) [rest, mvc]"))
+    })
+
+    teste("inclui esquemas adicionais", funcao() {
+        var sistema = executar(["esquemas"], {}, esquemasAdicionais())
+        afirmar.verdadeiro(sistema.saida.inclui("  meuProjeto:"))
+        afirmar.verdadeiro(sistema.saida.inclui("    • modo (texto) [rapido, lento] (padrão: 'rapido')"))
+    })
+
+    teste("mostra uma propriedade em todos os espaços de nomes", funcao() {
+        var sistema = executar(["info", "porta"], {}, nulo)
+        afirmar.igual(0, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("Propriedade: porta"))
+        afirmar.verdadeiro(sistema.saida.inclui("  Espaço de nomes: liquido.roteador"))
+        afirmar.verdadeiro(sistema.saida.inclui("  Espaço de nomes: liquido.dados"))
+        afirmar.verdadeiro(sistema.saida.inclui("  Padrão:    3000"))
+    })
+
+    teste("mostra valores permitidos", funcao() {
+        var sistema = executar(["info", "arquetipo"], {}, nulo)
+        afirmar.verdadeiro(sistema.saida.inclui("  Valores permitidos: [rest, mvc]"))
+        afirmar.verdadeiro(sistema.saida.inclui("  Tipo:      texto"))
+    })
+
+    teste("informa propriedade não encontrada", funcao() {
+        var sistema = executar(["info", "inexistente"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("Nenhuma propriedade encontrada com esse nome.\n", sistema.saida)
+    })
+
+    teste("exige o nome da propriedade", funcao() {
+        var sistema = executar(["info"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("O comando 'info' requer o nome de uma propriedade.\n", sistema.erro)
+        afirmar.igual(1, executar(["info", "--x"], {}, nulo).codigo)
+    })
+
+    teste("procura também nos esquemas adicionais", funcao() {
+        var sistema = executar(["info", "modo"], {}, esquemasAdicionais())
+        afirmar.igual(0, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("  Espaço de nomes: meuProjeto"))
+    })
+})
+
+grupo("Linha de comando: compreender", funcao() {
+    teste("mostra as propriedades", funcao() {
+        var sistema = executar(["compreender", "a.delprops"], comArquivo("/projeto/a.delprops", "// x\nliquido.roteador.cors = verdadeiro\nliquido.roteador.porta = 3000"), nulo)
+        afirmar.igual(0, sistema.codigo)
+        afirmar.igual("Propriedades encontradas:\n  Linha 2: liquido.roteador.cors = verdadeiro\n  Linha 3: liquido.roteador.porta = 3000\n", sistema.saida)
+    })
+
+    teste("mostra os erros de sintaxe", funcao() {
+        var sistema = executar(["compreender", "a.delprops"], comArquivo("/projeto/a.delprops", "sem separador"), nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("Nenhuma propriedade encontrada.\n\nErros de sintaxe:\n  Linha 1: Linha sem o separador '='.\n", sistema.saida)
+    })
+
+    teste("informa arquivo inexistente", funcao() {
+        var sistema = executar(["compreender", "falta.delprops"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("Arquivo não encontrado: falta.delprops\n", sistema.erro)
+    })
+
+    teste("exige o caminho do arquivo", funcao() {
+        var sistema = executar(["compreender"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("O comando 'compreender' requer o caminho de um arquivo .delprops.\n", sistema.erro)
+    })
+
+    teste("exige valor para --esquemas", funcao() {
+        var sistema = executar(["compreender", "a.delprops", "--esquemas"], {}, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.igual("A opção '--esquemas' requer um valor.\n", sistema.erro)
+    })
+})
+
+grupo("Linha de comando: validar", funcao() {
+    teste("aceita arquivo válido", funcao() {
+        var conteudo = "liquido.arquetipo = 'mvc'\nliquido.roteador.cors = verdadeiro\nliquido.dados.principal.tecnologia = 'sqlite'\noutro.qualquer = 1"
+        var sistema = executar(["validar", "a.delprops"], comArquivo("/projeto/a.delprops", conteudo), nulo)
+        afirmar.igual(0, sistema.codigo)
+        afirmar.igual("Arquivo válido. Nenhum aviso ou erro encontrado.\n", sistema.saida)
+    })
+
+    teste("informa erros de validação", funcao() {
+        var sistema = executar(["validar", "a.delprops"], comArquivo("/projeto/a.delprops", "liquido.roteador.porta = 'abc'"), nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("[Erro] Linha 1: liquido.roteador.porta — Tipo esperado 'numero'"))
+        afirmar.verdadeiro(sistema.saida.inclui("Resumo: 0 aviso(s), 1 erro(s)."))
+    })
+
+    teste("avisos não falham a validação", funcao() {
+        var sistema = executar(["validar", "a.delprops"], comArquivo("/projeto/a.delprops", "liquido.roteador.novo = verdadeiro"), nulo)
+        afirmar.igual(0, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("[Aviso] Linha 1: liquido.roteador.novo — Propriedade 'novo' desconhecida"))
+        afirmar.verdadeiro(sistema.saida.inclui("Resumo: 1 aviso(s), 0 erro(s)."))
+    })
+
+    teste("informa chaves duplicadas como erro", funcao() {
+        var sistema = executar(["validar", "a.delprops"], comArquivo("/projeto/a.delprops", "liquido.roteador.cors = verdadeiro\nliquido.roteador.cors = falso"), nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("[Erro] Linha 2: Chave duplicada 'liquido.roteador.cors' (já definida na linha 1)."))
+    })
+
+    teste("carrega esquemas de arquivo com --esquemas", funcao() {
+        var arquivos = comArquivo("/projeto/a.delprops", "meuProjeto.modo = 'lento'\nmeuProjeto.limite = 'x'")
+        arquivos["/projeto/esquemas.json"] = "{\n  // esquemas do projeto\n  \"meuProjeto\": [\n    { \"nome\": \"modo\", \"tipo\": \"texto\", \"detalhe\": \"Modo.\", \"valoresPermitidos\": [\"rapido\", \"lento\"] },\n    { \"nome\": \"limite\", \"tipo\": \"numero\", \"detalhe\": \"Limite.\" }\n  ]\n}"
+        var sistema = executar(["validar", "--esquemas", "esquemas.json", "a.delprops"], arquivos, nulo)
+        afirmar.igual(1, sistema.codigo)
+        afirmar.falso(sistema.saida.inclui("meuProjeto.modo"))
+        afirmar.verdadeiro(sistema.saida.inclui("[Erro] Linha 2: meuProjeto.limite — Tipo esperado 'numero'"))
+    })
+
+    teste("informa arquivo de esquemas inexistente ou inválido", funcao() {
+        var arquivos = comArquivo("/projeto/a.delprops", "a = 1")
+        var inexistente = executar(["validar", "a.delprops", "--esquemas", "falta.json"], arquivos, nulo)
+        afirmar.igual(1, inexistente.codigo)
+        afirmar.igual("Arquivo de esquemas não encontrado: falta.json\n", inexistente.erro)
+        afirmar.igual("", inexistente.saida)
+
+        arquivos["/projeto/ruim.json"] = "{ quebrado"
+        var invalido = executar(["validar", "a.delprops", "--esquemas", "ruim.json"], arquivos, nulo)
+        afirmar.igual(1, invalido.codigo)
+        afirmar.verdadeiro(invalido.erro.inclui("Erro ao carregar esquemas de 'ruim.json'"))
+    })
+
+    teste("usa os esquemas adicionais passados à função", funcao() {
+        var sistema = executar(["validar", "a.delprops"], comArquivo("/projeto/a.delprops", "meuProjeto.modo = 'turbo'"), esquemasAdicionais())
+        afirmar.igual(1, sistema.codigo)
+        afirmar.verdadeiro(sistema.saida.inclui("Valor 'turbo' não está entre os permitidos: [rapido, lento]."))
+    })
+})

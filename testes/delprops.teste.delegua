@@ -1,0 +1,41 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var delprops = importar("../fontes/delprops.delegua")
+
+grupo("Ponto de entrada", funcao() {
+    teste("analisa e valida pelo ponto de entrada", funcao() {
+        var compreendido = delprops.analisar("liquido.roteador.porta = 8080\nliquido.roteador.cors = 'sim'")
+        afirmar.igual(2, compreendido.propriedades.tamanho())
+        var resultado = delprops.validar(compreendido.propriedades, delprops.obterEsquemasEmbutidos())
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.igual(2, resultado.erros[0].linha)
+    })
+
+    teste("validarConteudo junta erros de compreensão e de validação", funcao() {
+        var resultado = delprops.validarConteudo("liquido.arquetipo = 'spa'\nsem separador", delprops.obterEsquemasEmbutidos())
+        afirmar.igual(2, resultado.erros.tamanho())
+        afirmar.igual("liquido.arquetipo", resultado.erros[0].chave)
+        afirmar.igual("", resultado.erros[1].chave)
+        afirmar.igual("Arquivo válido. Nenhum aviso ou erro encontrado.", delprops.formatarValidacao(delprops.validarConteudo("", {})))
+    })
+
+    teste("cria definições, registros e esquemas", funcao() {
+        var definicao = delprops.definicaoPropriedade("modo", "texto", "Modo.", nulo, ["a"])
+        afirmar.igual("modo", definicao.nome)
+        afirmar.nulo(delprops.definicaoDeDicionario({ "nome": "x", "tipo": "data", "detalhe": "?" }))
+
+        var registro = delprops.criarRegistro()
+        registro.registrar("meu", "pacote", [definicao])
+        var esquemas = delprops.obterEsquemasEmbutidos()
+        delprops.mesclarEsquemas(esquemas, registro.obterEsquemas())
+        var resultado = delprops.validarConteudo("meu.modo = 'b'", esquemas)
+        afirmar.igual(1, resultado.erros.tamanho())
+
+        afirmar.igual("texto", delprops.inferirTipo("'x'"))
+        afirmar.igual("x", delprops.valorSemAspas("'x'"))
+        afirmar.igual(7, delprops.esquemasLiquido().chaves().tamanho())
+        afirmar.igual("", delprops.esquemasDeTexto("{}")["erro"])
+        afirmar.igual(3, delprops.tiposValor().tamanho())
+        afirmar.igual("0.1.0", delprops.versao())
+    })
+})

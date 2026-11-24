@@ -1,0 +1,67 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var registroDelprops = importar("../fontes/registro.delegua")
+var modelos = importar("../fontes/modelos.delegua")
+
+funcao definicao(nome) {
+    retorna modelos.DefinicaoPropriedade(nome, "texto", "Detalhe de " + nome + ".", nulo, nulo)
+}
+
+grupo("Registro", funcao() {
+    teste("começa vazio", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(0, registro.obterTodos().chaves().tamanho())
+        afirmar.falso(registro.temRegistro("liquido.dados"))
+        afirmar.igual(0, registro.obter("liquido.dados").tamanho())
+    })
+
+    teste("registra definições de um pacote", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        registro.registrar("liquido.dados", "pacote-a", [definicao("tecnologia"), definicao("caminho")])
+        afirmar.verdadeiro(registro.temRegistro("liquido.dados"))
+        var definicoes = registro.obter("liquido.dados")
+        afirmar.igual(2, definicoes.tamanho())
+        afirmar.igual("tecnologia", definicoes[0].nome)
+        afirmar.igual("caminho", definicoes[1].nome)
+    })
+
+    teste("consolida contribuições de vários pacotes", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        registro.registrar("liquido.dados", "pacote-a", [definicao("a")])
+        registro.registrar("liquido.dados", "pacote-b", [definicao("b"), definicao("c")])
+        registro.registrar("outro", "pacote-c", [definicao("d")])
+
+        afirmar.igual(3, registro.obter("liquido.dados").tamanho())
+        var contribuicoes = registro.obterTodos()["liquido.dados"]
+        afirmar.igual(2, contribuicoes.tamanho())
+        afirmar.igual("pacote-a", contribuicoes[0].pacote)
+        afirmar.igual("pacote-b", contribuicoes[1].pacote)
+        afirmar.verdadeiro(registro.pacoteRegistrado("liquido.dados", "pacote-b"))
+        afirmar.falso(registro.pacoteRegistrado("liquido.dados", "pacote-c"))
+    })
+
+    teste("devolve esquemas no formato de validar", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        registro.registrar("liquido.dados", "pacote-a", [definicao("a")])
+        registro.registrar("outro", "pacote-c", [definicao("d")])
+        var esquemas = registro.obterEsquemas()
+        afirmar.igual("liquido.dados,outro", esquemas.chaves().juntar(","))
+        afirmar.igual("d", esquemas["outro"][0].nome)
+    })
+
+    teste("registros diferentes não compartilham estado", funcao() {
+        var primeiro = registroDelprops.criarRegistro()
+        var segundo = registroDelprops.criarRegistro()
+        primeiro.registrar("liquido.dados", "pacote-a", [definicao("a")])
+        afirmar.falso(segundo.temRegistro("liquido.dados"))
+    })
+
+    teste("limpa os registros", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        registro.registrar("liquido.dados", "pacote-a", [definicao("a")])
+        registro.limpar()
+        afirmar.falso(registro.temRegistro("liquido.dados"))
+        registro.registrar("liquido.dados", "pacote-b", [definicao("b")])
+        afirmar.igual(1, registro.obter("liquido.dados").tamanho())
+    })
+})

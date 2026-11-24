@@ -1,0 +1,30 @@
+// Esquemas embutidos do Líquido, agrupados por espaço de nomes.
+importar tudo como arquetipoLiquido de "./liquido/arquetipo.delegua"
+importar tudo como linguagemLiquido de "./liquido/linguagem.delegua"
+importar tudo como aplicacaoLiquido de "./liquido/aplicacao.delegua"
+importar tudo como roteadorLiquido de "./liquido/roteador.delegua"
+importar tudo como dadosLiquido de "./liquido/dados.delegua"
+importar tudo como autenticacaoLiquido de "./liquido/autenticacao.delegua"
+importar tudo como estilosLiquido de "./liquido/estilos.delegua"
+
+funcao arquetipo() { retorna arquetipoLiquido.definicoes() }
+funcao linguagem() { retorna linguagemLiquido.definicoes() }
+funcao aplicacao() { retorna aplicacaoLiquido.definicoes() }
+funcao roteador() { retorna roteadorLiquido.definicoes() }
+// Fonte de dados genérica: liquido.dados.<nome>.*
+funcao dados() { retorna dadosLiquido.definicoes() }
+funcao autenticacao() { retorna autenticacaoLiquido.definicoes() }
+funcao estilos() { retorna estilosLiquido.definicoes() }
+
+// Espaço de nomes → definições, na ordem de exibição.
+funcao esquemas() {
+    var resultado = {}
+    resultado["liquido.arquetipo"] = arquetipo()
+    resultado["liquido.linguagem"] = linguagem()
+    resultado["liquido.aplicacao"] = aplicacao()
+    resultado["liquido.roteador"] = roteador()
+    resultado["liquido.dados"] = dados()
+    resultado["liquido.autenticacao"] = autenticacao()
+    resultado["liquido.estilos"] = estilos()
+    retorna resultado
+}

@@ -1,0 +1,12 @@
+// Propriedades de liquido.aplicacao.*.
+importar tudo como modelos de "../modelos.delegua"
+
+funcao definicoes() {
+    retorna [
+        modelos.DefinicaoPropriedade("nome", "texto", "Nome da aplicação.", nulo, nulo),
+        modelos.DefinicaoPropriedade("versao", "texto", "Versão da aplicação.", nulo, nulo),
+        modelos.DefinicaoPropriedade("descricao", "texto", "Descrição da aplicação.", nulo, nulo),
+        modelos.DefinicaoPropriedade("licenca.nome", "texto", "Nome da licença da aplicação.", nulo, nulo),
+        modelos.DefinicaoPropriedade("licenca.url", "texto", "URL da licença da aplicação.", nulo, nulo)
+    ]
+}

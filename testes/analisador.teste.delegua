@@ -1,0 +1,87 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var analisador = importar("../fontes/analisador.delegua")
+
+grupo("Analisador", funcao() {
+    teste("retorna listas vazias para conteúdo vazio", funcao() {
+        var resultado = analisador.analisar("")
+        afirmar.igual(0, resultado.propriedades.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("ignora linhas em branco e comentários", funcao() {
+        var resultado = analisador.analisar("\n   \n// comentário\n    // com espaços à esquerda\n")
+        afirmar.igual(0, resultado.propriedades.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+
+    teste("compreende uma propriedade simples", funcao() {
+        var resultado = analisador.analisar("liquido.roteador.cors = verdadeiro")
+        afirmar.igual(1, resultado.propriedades.tamanho())
+        var propriedade = resultado.propriedades[0]
+        afirmar.igual("liquido.roteador.cors", propriedade.chave)
+        afirmar.igual("verdadeiro", propriedade.valor)
+        afirmar.igual(1, propriedade.linha)
+    })
+
+    teste("mantém aspas e espaços internos do valor", funcao() {
+        var resultado = analisador.analisar("liquido.aplicacao.nome = 'Minha aplicação'")
+        afirmar.igual("'Minha aplicação'", resultado.propriedades[0].valor)
+    })
+
+    teste("compreende números e aceita espaços em volta do =", funcao() {
+        var resultado = analisador.analisar("liquido.roteador.porta=3000\nliquido.roteador.cors   =   falso")
+        afirmar.igual("3000", resultado.propriedades[0].valor)
+        afirmar.igual("liquido.roteador.cors", resultado.propriedades[1].chave)
+        afirmar.igual("falso", resultado.propriedades[1].valor)
+    })
+
+    teste("numera as linhas considerando comentários e linhas em branco", funcao() {
+        var resultado = analisador.analisar("// início\n\na = 1\n// meio\nb = 2\r\n")
+        afirmar.igual(2, resultado.propriedades.tamanho())
+        afirmar.igual(3, resultado.propriedades[0].linha)
+        afirmar.igual(5, resultado.propriedades[1].linha)
+        afirmar.igual("2", resultado.propriedades[1].valor)
+    })
+
+    teste("divide apenas no primeiro =", funcao() {
+        var resultado = analisador.analisar("a.b = 'x=y'")
+        afirmar.igual("'x=y'", resultado.propriedades[0].valor)
+    })
+
+    teste("informa linha sem separador", funcao() {
+        var resultado = analisador.analisar("linha sem separador")
+        afirmar.igual(1, resultado.erros.tamanho())
+        afirmar.igual("Linha sem o separador '='.", resultado.erros[0].mensagem)
+        afirmar.igual(1, resultado.erros[0].linha)
+    })
+
+    teste("informa chave vazia e valor vazio", funcao() {
+        var resultado = analisador.analisar(" = 1\na =   ")
+        afirmar.igual(2, resultado.erros.tamanho())
+        afirmar.igual("Chave vazia.", resultado.erros[0].mensagem)
+        afirmar.igual("Valor vazio para a chave 'a'.", resultado.erros[1].mensagem)
+        afirmar.igual(2, resultado.erros[1].linha)
+    })
+
+    teste("continua após erros", funcao() {
+        var resultado = analisador.analisar("errada\na = 1\n= 2\nb = 'ok'")
+        afirmar.igual(2, resultado.erros.tamanho())
+        afirmar.igual(2, resultado.propriedades.tamanho())
+    })
+
+    teste("informa chave duplicada com a linha original", funcao() {
+        var resultado = analisador.analisar("a.b = 1\n// comentário\na.b = 2\na.b = 3")
+        afirmar.igual(1, resultado.propriedades.tamanho())
+        afirmar.igual(2, resultado.erros.tamanho())
+        afirmar.igual("Chave duplicada 'a.b' (já definida na linha 1).", resultado.erros[0].mensagem)
+        afirmar.igual(3, resultado.erros[0].linha)
+        afirmar.igual(4, resultado.erros[1].linha)
+    })
+
+    teste("permite o mesmo nome em espaços de nomes diferentes", funcao() {
+        var resultado = analisador.analisar("liquido.roteador.porta = 3000\nliquido.dados.principal.porta = 5432")
+        afirmar.igual(2, resultado.propriedades.tamanho())
+        afirmar.igual(0, resultado.erros.tamanho())
+    })
+})

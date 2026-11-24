@@ -1,0 +1,72 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var esquemasCli = importar("../fontes/esquemas.delegua")
+var modelos = importar("../fontes/modelos.delegua")
+var json = importar("../fontes/utilidades/json.delegua")
+
+grupo("JSONC", funcao() {
+    teste("remove comentários de linha e de bloco", funcao() {
+        afirmar.igual("{\"a\": 1} ", json.removerComentarios("{\"a\": 1} // fim")["resultado"])
+        afirmar.igual("\n{}", json.removerComentarios("// início\n{}")["resultado"])
+        afirmar.igual("{\"a\": 1}", json.removerComentarios("{/* bloco */\"a\": 1}")["resultado"])
+        afirmar.igual("{}", json.removerComentarios("{/* várias\nlinhas */}")["resultado"])
+        afirmar.igual("{}", json.removerComentarios("{}/**/")["resultado"])
+    })
+
+    teste("preserva // e /* dentro de textos", funcao() {
+        afirmar.igual("{\"url\": \"https://x\"}", json.removerComentarios("{\"url\": \"https://x\"}")["resultado"])
+        afirmar.igual("{\"a\": \"/* não */\"}", json.removerComentarios("{\"a\": \"/* não */\"}")["resultado"])
+        afirmar.igual("{\"a\": \"x\\\"// y\"}", json.removerComentarios("{\"a\": \"x\\\"// y\"}")["resultado"])
+    })
+
+    teste("informa comentário de bloco não fechado", funcao() {
+        afirmar.igual("Comentário de bloco não fechado", json.removerComentarios("{} /* aberto")["erro"])
+        afirmar.igual("Comentário de bloco não fechado", json.analisarJsonc("{} /*")["erro"])
+    })
+
+    teste("analisa JSONC", funcao() {
+        var lido = json.analisarJsonc("{\n  // nome\n  \"nome\": \"x\",\n  \"lista\": [1, 2] /* fim */\n}")
+        afirmar.igual("", lido["erro"])
+        afirmar.igual("x", lido["resultado"]["nome"])
+        afirmar.igual(2, lido["resultado"]["lista"].tamanho())
+    })
+})
+
+grupo("Esquemas", funcao() {
+    teste("embutidos são os do Líquido", funcao() {
+        var esquemas = esquemasCli.obterEsquemasEmbutidos()
+        afirmar.igual(7, esquemas.chaves().tamanho())
+        afirmar.igual(9, esquemas["liquido.roteador"].tamanho())
+    })
+
+    teste("lê esquemas de texto JSON", funcao() {
+        var resultado = esquemasCli.esquemasDeTexto("{ \"meu\": [ { \"nome\": \"modo\", \"tipo\": \"texto\", \"detalhe\": \"Modo.\", \"padrao\": \"'a'\", \"valoresPermitidos\": [\"a\", \"b\"] } ], \"ignorado\": 3 }")
+        afirmar.igual("", resultado["erro"])
+        var esquemas = resultado["esquemas"]
+        afirmar.igual("meu", esquemas.chaves().juntar(","))
+        var definicao = esquemas["meu"][0]
+        afirmar.igual("modo", definicao.nome)
+        afirmar.igual("texto", definicao.tipoValor)
+        afirmar.igual("'a'", definicao.valorPadrao)
+        afirmar.igual("a,b", definicao.valoresPermitidos.juntar(","))
+    })
+
+    teste("informa JSON inválido ou que não é objeto", funcao() {
+        afirmar.diferente("", esquemasCli.esquemasDeTexto("{ quebrado")["erro"])
+        afirmar.igual("Esperado um objeto JSON de espaços de nomes.", esquemasCli.esquemasDeTexto("[1]")["erro"])
+    })
+
+    teste("mescla esquemas sem perder os existentes", funcao() {
+        var base = esquemasCli.obterEsquemasEmbutidos()
+        var extra = [modelos.DefinicaoPropriedade("extra", "logico", "Extra.", nulo, nulo)]
+        var novo = [modelos.DefinicaoPropriedade("x", "numero", "X.", nulo, nulo)]
+        var adicionais = {}
+        adicionais["liquido.roteador"] = extra
+        adicionais["novo"] = novo
+        esquemasCli.mesclarEsquemas(base, adicionais)
+        afirmar.igual(10, base["liquido.roteador"].tamanho())
+        afirmar.igual("extra", base["liquido.roteador"][9].nome)
+        afirmar.igual(1, base["novo"].tamanho())
+        afirmar.igual(9, esquemasCli.obterEsquemasEmbutidos()["liquido.roteador"].tamanho())
+    })
+})

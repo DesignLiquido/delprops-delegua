@@ -1,0 +1,118 @@
+// Auxiliares dos testes: sistemas falsos da linha de comando e do sistema de arquivos.
+importar tudo como modelos de "../fontes/modelos.delegua"
+importar tudo como textos de "../fontes/utilidades/texto.delegua"
+
+// Sistema da linha de comando em memória. `arquivos` é um dicionário caminho → conteúdo;
+// caminhos relativos são resolvidos a partir de "/projeto".
+classe SistemaCliFalso {
+    argumentos: vetor
+    arquivos: dicionário
+    saida: texto
+    erro: texto
+    codigo: número
+
+    construtor(argumentos, arquivos) {
+        isto.argumentos = argumentos
+        isto.arquivos = arquivos
+        isto.saida = ""
+        isto.erro = ""
+        isto.codigo = -1
+    }
+
+    lerArquivo(caminho) {
+        retorna isto.arquivos[caminho]
+    }
+
+    diretorioAtual() {
+        retorna "/projeto"
+    }
+
+    juntarCaminhos(base, parte) {
+        retorna base + "/" + parte
+    }
+
+    resolverCaminho(base, caminho) {
+        se (textos.comecaCom(caminho, "/")) { retorna caminho }
+        retorna base + "/" + caminho
+    }
+
+    escreverSaida(conteudo) {
+        isto.saida = isto.saida + conteudo
+    }
+
+    escreverErro(conteudo) {
+        isto.erro = isto.erro + conteudo
+    }
+
+    encerrar(codigo) {
+        isto.codigo = codigo
+    }
+
+    existe(caminho) {
+        retorna isto.arquivos.contem(caminho)
+    }
+}
+
+funcao sistemaCli(argumentos, arquivos) {
+    retorna SistemaCliFalso(argumentos, arquivos)
+}
+
+// Sistema de arquivos de descoberta em memória. `arquivos` é um dicionário caminho →
+// conteúdo; os diretórios são deduzidos dos caminhos.
+classe SistemaArquivosFalso {
+    arquivos: dicionário
+
+    construtor(arquivos) {
+        isto.arquivos = arquivos
+    }
+
+    ehDiretorio(caminho) {
+        var caminhos = isto.arquivos.chaves()
+        para (var i = 0; i < caminhos.tamanho(); i = i + 1) {
+            se (textos.comecaCom(caminhos[i], caminho + "/")) { retorna verdadeiro }
+        }
+        retorna falso
+    }
+
+    existe(caminho) {
+        retorna isto.arquivos.contem(caminho) ou isto.ehDiretorio(caminho)
+    }
+
+    listarDiretorio(caminho) {
+        var nomes = []
+        var entradas = []
+        var caminhos = isto.arquivos.chaves()
+        para (var i = 0; i < caminhos.tamanho(); i = i + 1) {
+            var atual = caminhos[i]
+            se (textos.comecaCom(atual, caminho + "/")) {
+                var resto = atual.subtexto(caminho.tamanho() + 1, atual.tamanho())
+                var nome = resto.dividir("/")[0]
+                se (nao nomes.inclui(nome)) {
+                    nomes.adicionar(nome)
+                    entradas.adicionar(modelos.EntradaDiretorio(nome, resto.inclui("/")))
+                }
+            }
+        }
+        retorna entradas
+    }
+
+    lerTexto(caminho) {
+        retorna isto.arquivos[caminho]
+    }
+
+    juntarCaminhos(base, parte) {
+        retorna base + "/" + parte
+    }
+}
+
+funcao sistemaArquivos(arquivos) {
+    retorna SistemaArquivosFalso(arquivos)
+}
+
+// Primeiro item de `lista` cujo campo `nome` é `nome`, ou nulo.
+funcao porNome(lista, nome) {
+    para (var i = 0; i < lista.tamanho(); i = i + 1) {
+        se (lista[i].nome == nome) { retorna lista[i] }
+    }
+    retorna nulo
+}

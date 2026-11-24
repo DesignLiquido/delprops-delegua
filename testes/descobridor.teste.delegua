@@ -1,0 +1,107 @@
+importar { grupo, teste, afirmar } de "testes"
+
+var descobridor = importar("../fontes/descobridor.delegua")
+var registroDelprops = importar("../fontes/registro.delegua")
+var auxiliares = importar("./auxiliares.delegua")
+var sistemaArquivosNode = importar("../fontes/sistema_arquivos_node.delegua")
+
+funcao manifestoDados(nome) {
+    retorna "{ \"nome\": \"" + nome + "\", \"delprops\": { \"espacoNomes\": \"liquido.dados\", \"esquema\": \"delprops/dados.json\" } }"
+}
+
+funcao esquemaDados() {
+    retorna "[ { \"nome\": \"tecnologia\", \"tipo\": \"texto\", \"detalhe\": \"Tecnologia.\", \"valoresPermitidos\": [\"duckdb\"] } ]"
+}
+
+grupo("Descobridor", funcao() {
+    teste("não faz nada se o diretório não existe", funcao() {
+        var registro = registroDelprops.criarRegistro()
+        var sistema = auxiliares.sistemaArquivos({})
+        afirmar.igual(0, descobridor.descobrir("/projeto/pacotes", sistema, registro))
+        afirmar.igual(0, registro.obterTodos().chaves().tamanho())
+    })
+
+    teste("registra pacote de pacotes/<realizacao>", funcao() {
+        var arquivos = {}
+        arquivos["/p/node/duckdb/pacoteca.jsonc"] = manifestoDados("conector-duckdb")
+        arquivos["/p/node/duckdb/delprops/dados.json"] = esquemaDados()
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(1, descobridor.descobrir("/p/node", auxiliares.sistemaArquivos(arquivos), registro))
+        var definicoes = registro.obter("liquido.dados")
+        afirmar.igual(1, definicoes.tamanho())
+        afirmar.igual("tecnologia", definicoes[0].nome)
+        afirmar.igual("duckdb", definicoes[0].valoresPermitidos[0])
+        afirmar.igual("conector-duckdb", registro.obterTodos()["liquido.dados"][0].pacote)
+    })
+
+    teste("percorre as realizações de pacotes/ e registra cada pacote uma vez", funcao() {
+        var arquivos = {}
+        arquivos["/p/llvm/duckdb/pacoteca.jsonc"] = manifestoDados("conector-duckdb")
+        arquivos["/p/llvm/duckdb/delprops/dados.json"] = esquemaDados()
+        arquivos["/p/node/duckdb/pacoteca.jsonc"] = manifestoDados("conector-duckdb")
+        arquivos["/p/node/duckdb/delprops/dados.json"] = esquemaDados()
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(1, descobridor.descobrir("/p", auxiliares.sistemaArquivos(arquivos), registro))
+        afirmar.igual(1, registro.obter("liquido.dados").tamanho())
+    })
+
+    teste("usa o nome do diretório quando o manifesto não tem nome", funcao() {
+        var arquivos = {}
+        arquivos["/p/meu-pacote/pacoteca.jsonc"] = "{ \"delprops\": { \"espacoNomes\": \"x\", \"esquema\": \"e.json\" } }"
+        arquivos["/p/meu-pacote/e.json"] = "[ { \"nome\": \"a\", \"tipo\": \"numero\", \"detalhe\": \"A.\" } ]"
+        var registro = registroDelprops.criarRegistro()
+        descobridor.descobrir("/p", auxiliares.sistemaArquivos(arquivos), registro)
+        afirmar.igual("meu-pacote", registro.obterTodos()["x"][0].pacote)
+    })
+
+    teste("aceita vetor de contribuições e comentários no manifesto", funcao() {
+        var arquivos = {}
+        arquivos["/p/varios/pacoteca.jsonc"] = "{\n  \"nome\": \"varios\",\n  // dois espaços de nomes\n  \"delprops\": [\n    { \"espacoNomes\": \"a\", \"esquema\": \"a.json\" },\n    /* segundo */ { \"espacoNomes\": \"b\", \"esquema\": \"b.jsonc\" }\n  ]\n}"
+        arquivos["/p/varios/a.json"] = "[ { \"nome\": \"x\", \"tipo\": \"texto\", \"detalhe\": \"X.\" } ]"
+        arquivos["/p/varios/b.jsonc"] = "// esquema\n[ { \"nome\": \"y\", \"tipo\": \"logico\", \"detalhe\": \"Y.\", \"padrao\": \"falso\" } ]"
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(2, descobridor.descobrir("/p", auxiliares.sistemaArquivos(arquivos), registro))
+        afirmar.igual("x", registro.obter("a")[0].nome)
+        afirmar.igual("falso", registro.obter("b")[0].valorPadrao)
+    })
+
+    teste("ignora pacotes sem manifesto, sem delprops, inválidos ou incompletos", funcao() {
+        var arquivos = {}
+        arquivos["/p/sem-manifesto/LEIAME.md"] = "nada"
+        arquivos["/p/sem-delprops/pacoteca.jsonc"] = "{ \"nome\": \"sem-delprops\" }"
+        arquivos["/p/delprops-nulo/pacoteca.jsonc"] = "{ \"nome\": \"nulo\", \"delprops\": null }"
+        arquivos["/p/invalido/pacoteca.jsonc"] = "{ isto não é JSON"
+        arquivos["/p/incompleto/pacoteca.jsonc"] = "{ \"delprops\": { \"espacoNomes\": \"x\" } }"
+        arquivos["/p/sem-esquema/pacoteca.jsonc"] = "{ \"delprops\": { \"espacoNomes\": \"x\", \"esquema\": \"falta.json\" } }"
+        arquivos["/p/esquema-invalido/pacoteca.jsonc"] = "{ \"delprops\": { \"espacoNomes\": \"x\", \"esquema\": \"e.json\" } }"
+        arquivos["/p/esquema-invalido/e.json"] = "{ \"nao\": \"é vetor\" }"
+        arquivos["/p/arquivo-solto.txt"] = "nada"
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(0, descobridor.descobrir("/p", auxiliares.sistemaArquivos(arquivos), registro))
+        afirmar.igual(0, registro.obterTodos().chaves().tamanho())
+    })
+
+    teste("descobre pacotes reais com o sistema de arquivos node", funcao() {
+        var sistema = sistemaArquivosNode.sistemaArquivosNode()
+        var entradas = sistema.listarDiretorio("testes/exemplos/pacotes")
+        afirmar.igual("llvm,node", entradas.mapear(funcao(entrada) { retorna entrada.nome }).juntar(","))
+        afirmar.verdadeiro(entradas[0].ehDiretorio)
+
+        var registro = registroDelprops.criarRegistro()
+        afirmar.igual(1, descobridor.descobrir("testes/exemplos/pacotes", sistema, registro))
+        var definicoes = registro.obter("liquido.dados")
+        afirmar.igual("tecnologia,extensao", definicoes.mapear(funcao(definicao) { retorna definicao.nome }).juntar(","))
+        afirmar.igual("conector-duckdb", registro.obterTodos()["liquido.dados"][0].pacote)
+    })
+
+    teste("ignora definições inválidas do esquema", funcao() {
+        var arquivos = {}
+        arquivos["/p/parcial/pacoteca.jsonc"] = "{ \"delprops\": { \"espacoNomes\": \"x\", \"esquema\": \"e.json\" } }"
+        arquivos["/p/parcial/e.json"] = "[ { \"nome\": \"ok\", \"tipo\": \"texto\", \"detalhe\": \"Ok.\" }, { \"nome\": \"tipo-ruim\", \"tipo\": \"data\", \"detalhe\": \"?\" }, { \"nome\": \"sem-detalhe\", \"tipo\": \"texto\" }, 42 ]"
+        var registro = registroDelprops.criarRegistro()
+        descobridor.descobrir("/p", auxiliares.sistemaArquivos(arquivos), registro)
+        var definicoes = registro.obter("x")
+        afirmar.igual(1, definicoes.tamanho())
+        afirmar.igual("ok", definicoes[0].nome)
+    })
+})

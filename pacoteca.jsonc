@@ -1,0 +1,71 @@
+{
+  "nome": "delprops",
+  "descricao": "Especificação, análise e validação do formato de arquivo .delprops do ecossistema Delégua, escrito em Delégua.",
+  "versao": "0.1.0",
+  "realizacoes": ["node"],
+  "pontoDeEntrada": "fontes/delprops.delegua",
+  "simbolos": [
+    {
+      "tipo": "funcao",
+      "nome": "analisar",
+      "tipoRetorno": "ResultadoCompreensao",
+      "argumentos": [{ "nome": "conteudo", "tipo": "texto" }],
+      "documentacao": "Compreende o conteúdo de um arquivo .delprops. Devolve { propriedades, erros }."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "validar",
+      "tipoRetorno": "ResultadoValidacao",
+      "argumentos": [
+        { "nome": "propriedades", "tipo": "vetor" },
+        { "nome": "esquemas", "tipo": "dicionário" }
+      ],
+      "documentacao": "Valida propriedades compreendidas contra esquemas (espaço de nomes → definições). Devolve { avisos, erros }."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "validarConteudo",
+      "tipoRetorno": "ResultadoValidacao",
+      "argumentos": [
+        { "nome": "conteudo", "tipo": "texto" },
+        { "nome": "esquemas", "tipo": "dicionário" }
+      ],
+      "documentacao": "Compreende e valida o conteúdo de um arquivo .delprops de uma vez."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "obterEsquemasEmbutidos",
+      "tipoRetorno": "dicionário",
+      "argumentos": [],
+      "documentacao": "Esquemas embutidos do Líquido (liquido.*), por espaço de nomes."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "criarRegistro",
+      "tipoRetorno": "RegistroEsquemas",
+      "argumentos": [],
+      "documentacao": "Cria um registro de esquemas contribuídos por pacotes."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "descobrir",
+      "tipoRetorno": "número",
+      "argumentos": [
+        { "nome": "diretorioPacotes", "tipo": "texto" },
+        { "nome": "sistema", "tipo": "SistemaArquivosNode" },
+        { "nome": "registro", "tipo": "RegistroEsquemas" }
+      ],
+      "documentacao": "Registra os esquemas que os pacotes instalados pela Pacoteca declaram em pacoteca.jsonc."
+    },
+    {
+      "tipo": "funcao",
+      "nome": "executarCli",
+      "tipoRetorno": "número",
+      "argumentos": [
+        { "nome": "sistema", "tipo": "SistemaCliNode" },
+        { "nome": "esquemasAdicionais", "tipo": "dicionário" }
+      ],
+      "documentacao": "Executa a linha de comando delprops com o sistema dado e devolve o código de saída."
+    }
+  ]
+}

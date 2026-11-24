@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Executa a linha de comando do DelProps.
+# Uso: delprops <comando> [argumentos]
+DIRETORIO_DELPROPS="$(cd "$(dirname "$0")/.." && pwd)"
+exec ${DELPROPS_DELEGUA:-delegua} "$DIRETORIO_DELPROPS/fontes/ilc.delegua" -- "$@"

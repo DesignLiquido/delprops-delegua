@@ -1,0 +1,59 @@
+// Análise (compreensão) do conteúdo de um arquivo .delprops.
+//
+// Regras:
+// - Linhas em branco são ignoradas.
+// - Comentários começam com `//` e são ignorados.
+// - Toda linha não vazia deve seguir `<chave> = <valor>`.
+// - Chave e valor não podem estar vazios.
+// - Uma chave não pode ser definida mais de uma vez.
+importar tudo como modelos de "./modelos.delegua"
+importar tudo como textos de "./utilidades/texto.delegua"
+
+// Devolve um ResultadoCompreensao com as propriedades compreendidas e os erros de sintaxe.
+funcao analisar(conteudo) {
+    var propriedades = []
+    var erros = []
+    var linhas = ("" + conteudo).dividir("\n")
+    var chavesVistas = {}
+
+    para (var i = 0; i < linhas.tamanho(); i = i + 1) {
+        var numeroLinha = i + 1
+        var linha = linhas[i].aparar()
+
+        se (linha == "") { continua }
+        se (textos.comecaCom(linha, "//")) { continua }
+
+        var indiceIgual = linha.encontrar("=")
+        se (indiceIgual < 0) {
+            erros.adicionar(modelos.ErroCompreensao("Linha sem o separador '='.", numeroLinha))
+            continua
+        }
+
+        var chave = linha.subtexto(0, indiceIgual).aparar()
+        var valor = linha.subtexto(indiceIgual + 1, linha.tamanho()).aparar()
+
+        se (chave == "") {
+            erros.adicionar(modelos.ErroCompreensao("Chave vazia.", numeroLinha))
+            continua
+        }
+
+        se (valor == "") {
+            erros.adicionar(modelos.ErroCompreensao("Valor vazio para a chave '" + chave + "'.", numeroLinha))
+            continua
+        }
+
+        se (chavesVistas.contem(chave)) {
+            var linhaOriginal = chavesVistas[chave]
+            erros.adicionar(modelos.ErroCompreensao(
+                "Chave duplicada '" + chave + "' (já definida na linha " + texto(linhaOriginal) + ").",
+                numeroLinha
+            ))
+            continua
+        }
+
+        chavesVistas[chave] = numeroLinha
+        propriedades.adicionar(modelos.PropriedadeCompreendida(chave, valor, numeroLinha))
+    }
+
+    retorna modelos.ResultadoCompreensao(propriedades, erros)
+}

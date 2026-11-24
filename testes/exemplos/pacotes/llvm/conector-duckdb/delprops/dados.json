@@ -1,0 +1,4 @@
+[
+  { "nome": "tecnologia", "tipo": "texto", "detalhe": "Tecnologia de banco de dados.", "valoresPermitidos": ["duckdb"] },
+  { "nome": "extensao", "tipo": "texto", "detalhe": "Extensão do DuckDB." }
+]

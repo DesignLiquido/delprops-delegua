@@ -1,0 +1,8 @@
+// Propriedades de liquido.autenticacao.*.
+importar tudo como modelos de "../modelos.delegua"
+
+funcao definicoes() {
+    retorna [
+        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia de autenticação.", nulo, ["jwt"])
+    ]
+}
