@@ -8,64 +8,81 @@
 // ou um vetor de objetos assim. `esquema` é o caminho, relativo à raiz do pacote, de um
 // arquivo JSON (ou JSONC) com um vetor de definições de propriedade.
 //
-// O sistema de arquivos é injetado: qualquer objeto com os métodos
-//     existe(caminho) → lógico
-//     listarDiretorio(caminho) → vetor de EntradaDiretorio
-//     lerTexto(caminho) → texto
-//     juntarCaminhos(base, parte) → texto
-// serve. `sistemaArquivosNode()` (fontes/sistema_arquivos_node.delegua) usa a biblioteca
-// `arquivos`.
+// O sistema de arquivos é injetado: qualquer classe que implemente a interface
+// SistemaArquivosDescoberta (fontes/modelos.delegua) serve. `sistemaArquivosNode()`
+// (fontes/sistema_arquivos_node.delegua) usa a biblioteca `arquivos`.
 importar tudo como modelos de "./modelos.delegua"
 importar tudo como json de "./utilidades/json.delegua"
+importar { EntradaDiretorio, SistemaArquivosDescoberta } de "./modelos.delegua"
+importar { RegistroEsquemas } de "./registro.delegua"
+importar { ResultadoJson, ValorJson } de "./utilidades/json.delegua"
 
-funcao nomeManifesto() {
+funcao nomeManifesto(): texto {
     retorna "pacoteca.jsonc"
 }
 
 // Registra os esquemas de um manifesto `{ espacoNomes, esquema }`. Devolve 1 se registrou.
-funcao registrarManifesto(manifesto, caminhoPacote, nomePacote, sistemaArquivos, registro) {
-    se (nao modelos.ehDicionario(manifesto)) { retorna 0 }
-    var espacoNomes = manifesto["espacoNomes"]
-    var esquema = manifesto["esquema"]
-    se (nao modelos.ehTexto(espacoNomes) ou nao modelos.ehTexto(esquema)) { retorna 0 }
+funcao registrarManifesto(
+    manifesto: ValorJson,
+    caminhoPacote: texto,
+    nomePacote: texto,
+    sistemaArquivos: SistemaArquivosDescoberta,
+    registro: RegistroEsquemas
+): inteiro {
+    se (nao manifesto.ehObjeto()) { retorna 0 }
+    var espacoNomes: texto = manifesto.textoDoCampo("espacoNomes")
+    var esquema: texto = manifesto.textoDoCampo("esquema")
     se (espacoNomes == "" ou esquema == "") { retorna 0 }
     se (registro.pacoteRegistrado(espacoNomes, nomePacote)) { retorna 0 }
 
-    var caminhoEsquema = sistemaArquivos.juntarCaminhos(caminhoPacote, esquema)
+    var caminhoEsquema: texto = sistemaArquivos.juntarCaminhos(caminhoPacote, esquema)
     se (nao sistemaArquivos.existe(caminhoEsquema)) { retorna 0 }
-    var lido = json.analisarJsonc(sistemaArquivos.lerTexto(caminhoEsquema))
-    se (lido["erro"] != "" ou nao modelos.ehVetor(lido["resultado"])) { retorna 0 }
+    var lido: ResultadoJson = json.analisarJsonc(sistemaArquivos.lerTexto(caminhoEsquema))
+    se (lido.erro != "" ou nao lido.valor.ehVetor()) { retorna 0 }
 
-    registro.registrar(espacoNomes, nomePacote, modelos.definicoesDeVetor(lido["resultado"]))
+    registro.registrar(espacoNomes, nomePacote, modelos.definicoesDeJson(lido.valor))
     retorna 1
 }
 
 // Lê o `pacoteca.jsonc` de um pacote e registra suas contribuições. Devolve quantas registrou.
-funcao tentarCarregar(caminhoPacote, nomeDiretorio, sistemaArquivos, registro) {
-    var caminhoManifesto = sistemaArquivos.juntarCaminhos(caminhoPacote, nomeManifesto())
+funcao tentarCarregar(
+    caminhoPacote: texto,
+    nomeDiretorio: texto,
+    sistemaArquivos: SistemaArquivosDescoberta,
+    registro: RegistroEsquemas
+): inteiro {
+    var caminhoManifesto: texto = sistemaArquivos.juntarCaminhos(caminhoPacote, nomeManifesto())
     se (nao sistemaArquivos.existe(caminhoManifesto)) { retorna 0 }
 
-    var lido = json.analisarJsonc(sistemaArquivos.lerTexto(caminhoManifesto))
-    se (lido["erro"] != "" ou nao modelos.ehDicionario(lido["resultado"])) { retorna 0 }
-    var pacote = lido["resultado"]
+    var lido: ResultadoJson = json.analisarJsonc(sistemaArquivos.lerTexto(caminhoManifesto))
+    se (lido.erro != "" ou nao lido.valor.ehObjeto()) { retorna 0 }
+    var pacote: ValorJson = lido.valor
 
-    var nomePacote = nomeDiretorio
-    se (modelos.ehTexto(pacote["nome"]) e pacote["nome"] != "") { nomePacote = pacote["nome"] }
+    var nomePacote: texto = nomeDiretorio
+    var nomeManifestado: texto = pacote.textoDoCampo("nome")
+    se (nomeManifestado != "") { nomePacote = nomeManifestado }
 
-    var entrada = pacote["delprops"]
-    se (entrada == nulo) { retorna 0 }
-    var manifestos = [entrada]
-    se (modelos.ehVetor(entrada)) { manifestos = entrada }
+    var entrada: ValorJson = pacote.campo("delprops")
+    var manifestos: ValorJson[] = []
+    se (entrada.ehVetor()) {
+        para (var j = 0; j < entrada.itens.tamanho(); j = j + 1) {
+            var item: ValorJson = entrada.itens[j]
+            manifestos.adicionar(item)
+        }
+    } senao se (entrada.ehObjeto()) {
+        manifestos.adicionar(entrada)
+    }
 
-    var total = 0
+    var total: inteiro = 0
     para (var i = 0; i < manifestos.tamanho(); i = i + 1) {
-        total = total + registrarManifesto(manifestos[i], caminhoPacote, nomePacote, sistemaArquivos, registro)
+        var manifesto: ValorJson = manifestos[i]
+        total = total + registrarManifesto(manifesto, caminhoPacote, nomePacote, sistemaArquivos, registro)
     }
     retorna total
 }
 
-// Percorre o diretório de pacotes e registra no `registro` (RegistroEsquemas) os esquemas
-// que os pacotes declaram.
+// Percorre o diretório de pacotes e registra no `registro` os esquemas que os pacotes
+// declaram.
 // Aceita tanto `pacotes/<realizacao>` quanto `pacotes/` (nesse caso, percorre cada
 // realização). Pacotes repetidos em várias realizações são registrados uma vez.
 // Devolve a quantidade de contribuições registradas.
@@ -74,15 +91,15 @@ funcao tentarCarregar(caminhoPacote, nomeDiretorio, sistemaArquivos, registro) {
 //     var registro = criarRegistro()
 //     descobrir(arquivos.juntarCaminhos(diretorioProjeto, "pacotes"), sistemaArquivosNode(), registro)
 //     var esquemas = registro.obterEsquemas()
-funcao descobrir(diretorioPacotes, sistemaArquivos, registro) {
+funcao descobrir(diretorioPacotes: texto, sistemaArquivos: SistemaArquivosDescoberta, registro: RegistroEsquemas): inteiro {
     se (nao sistemaArquivos.existe(diretorioPacotes)) { retorna 0 }
 
-    var total = 0
-    var entradas = sistemaArquivos.listarDiretorio(diretorioPacotes)
+    var total: inteiro = 0
+    var entradas: EntradaDiretorio[] = sistemaArquivos.listarDiretorio(diretorioPacotes)
     para (var i = 0; i < entradas.tamanho(); i = i + 1) {
-        var entrada = entradas[i]
+        var entrada: EntradaDiretorio = entradas[i]
         se (nao entrada.ehDiretorio) { continua }
-        var caminho = sistemaArquivos.juntarCaminhos(diretorioPacotes, entrada.nome)
+        var caminho: texto = sistemaArquivos.juntarCaminhos(diretorioPacotes, entrada.nome)
 
         se (sistemaArquivos.existe(sistemaArquivos.juntarCaminhos(caminho, nomeManifesto()))) {
             total = total + tentarCarregar(caminho, entrada.nome, sistemaArquivos, registro)
@@ -90,9 +107,9 @@ funcao descobrir(diretorioPacotes, sistemaArquivos, registro) {
         }
 
         // Diretório de uma realização (pacotes/node, pacotes/llvm...).
-        var subentradas = sistemaArquivos.listarDiretorio(caminho)
+        var subentradas: EntradaDiretorio[] = sistemaArquivos.listarDiretorio(caminho)
         para (var j = 0; j < subentradas.tamanho(); j = j + 1) {
-            var subentrada = subentradas[j]
+            var subentrada: EntradaDiretorio = subentradas[j]
             se (subentrada.ehDiretorio) {
                 total = total + tentarCarregar(
                     sistemaArquivos.juntarCaminhos(caminho, subentrada.nome),

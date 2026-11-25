@@ -6,3 +6,8 @@ cobertura/
 coverage/
 
 CLAUDE.md
+
+# Artefatos do delegua-llvm
+*.ll
+*.o
+*.exe

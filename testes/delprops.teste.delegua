@@ -1,6 +1,7 @@
 importar { grupo, teste, afirmar } de "testes"
 
 var delprops = importar("../fontes/delprops.delegua")
+var json = importar("../fontes/utilidades/json.delegua")
 
 grupo("Ponto de entrada", funcao() {
     teste("analisa e valida pelo ponto de entrada", funcao() {
@@ -20,9 +21,10 @@ grupo("Ponto de entrada", funcao() {
     })
 
     teste("cria definições, registros e esquemas", funcao() {
-        var definicao = delprops.definicaoPropriedade("modo", "texto", "Modo.", nulo, ["a"])
+        var definicao = delprops.definicaoPropriedade("modo", "texto", "Modo.", "", ["a"])
         afirmar.igual("modo", definicao.nome)
-        afirmar.nulo(delprops.definicaoDeDicionario({ "nome": "x", "tipo": "data", "detalhe": "?" }))
+        var lido = json.analisar("{ \"nome\": \"x\", \"tipo\": \"data\", \"detalhe\": \"?\" }")
+        afirmar.nulo(delprops.definicaoDeJson(lido.valor))
 
         var registro = delprops.criarRegistro()
         registro.registrar("meu", "pacote", [definicao])
@@ -34,7 +36,7 @@ grupo("Ponto de entrada", funcao() {
         afirmar.igual("texto", delprops.inferirTipo("'x'"))
         afirmar.igual("x", delprops.valorSemAspas("'x'"))
         afirmar.igual(7, delprops.esquemasLiquido().chaves().tamanho())
-        afirmar.igual("", delprops.esquemasDeTexto("{}")["erro"])
+        afirmar.igual("", delprops.esquemasDeTexto("{}").erro)
         afirmar.igual(3, delprops.tiposValor().tamanho())
         afirmar.igual("0.1.0", delprops.versao())
     })

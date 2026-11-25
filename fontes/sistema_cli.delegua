@@ -1,50 +1,56 @@
-// Sistema da linha de comando para a realização node, sobre as bibliotecas `arquivos`,
-// `argumentos` e `processo`.
+// Sistema da linha de comando sobre as bibliotecas `arquivos` e `processo`, que existem
+// nas realizações node e llvm. Os argumentos são lidos pelo ponto de entrada de cada
+// realização (fontes/ilc.delegua, fontes/ilc_llvm.delegua), porque a biblioteca
+// `argumentos` tem interfaces diferentes em cada uma.
 //
 // `escreva` sempre termina a linha, então a saída é acumulada e escrita de uma vez em
 // `encerrar`, sem a quebra de linha final.
 importar tudo como arquivos de "arquivos"
-importar tudo como argumentosProcesso de "argumentos"
 importar tudo como processo de "processo"
 importar tudo como textos de "./utilidades/texto.delegua"
+importar { SistemaCli } de "./modelos.delegua"
 
-funcao semQuebraFinal(conteudo) {
+funcao semQuebraFinal(conteudo: texto): texto {
     se (textos.terminaCom(conteudo, "\n")) { retorna conteudo.subtexto(0, conteudo.tamanho() - 1) }
     retorna conteudo
 }
 
-classe SistemaCliNode {
-    argumentos: vetor
+classe SistemaCliLocal herda SistemaCli {
+    argumentos: texto[]
     saida: texto
     erro: texto
 
-    construtor(argumentos) {
+    construtor(argumentos: texto[]) {
         isto.argumentos = argumentos
         isto.saida = ""
         isto.erro = ""
     }
 
-    lerArquivo(caminho) {
+    obterArgumentos(): texto[] {
+        retorna isto.argumentos
+    }
+
+    lerArquivo(caminho: texto): texto {
         retorna arquivos.lerTexto(caminho)
     }
 
-    diretorioAtual() {
+    diretorioAtual(): texto {
         retorna arquivos.diretorioAtual()
     }
 
-    juntarCaminhos(base, parte) {
+    juntarCaminhos(base: texto, parte: texto): texto {
         retorna arquivos.juntarCaminhos(base, parte)
     }
 
-    resolverCaminho(base, caminho) {
+    resolverCaminho(base: texto, caminho: texto): texto {
         retorna arquivos.caminhoAbsoluto(arquivos.juntarCaminhos(base, caminho))
     }
 
-    escreverSaida(conteudo) {
+    escreverSaida(conteudo: texto) {
         isto.saida = isto.saida + conteudo
     }
 
-    escreverErro(conteudo) {
+    escreverErro(conteudo: texto) {
         isto.erro = isto.erro + conteudo
     }
 
@@ -55,20 +61,17 @@ classe SistemaCliNode {
         isto.saida = ""
     }
 
-    encerrar(codigo) {
+    encerrar(codigo: inteiro) {
         isto.descarregar()
         processo.sair(codigo)
     }
 
-    existe(caminho) {
+    existe(caminho: texto): lógico {
         retorna arquivos.existe(caminho)
     }
 }
 
-// Sistema com os argumentos do processo atual.
-funcao sistemaCliNode() {
-    var lista = []
-    var todos: vetor = argumentosProcesso.argumentos
-    para (var i = 0; i < todos.tamanho(); i = i + 1) { lista.adicionar("" + todos[i]) }
-    retorna SistemaCliNode(lista)
+// Sistema da linha de comando com os argumentos dados (sem o interpretador e o programa).
+funcao sistemaCliLocal(argumentos: texto[]): SistemaCliLocal {
+    retorna SistemaCliLocal(argumentos)
 }

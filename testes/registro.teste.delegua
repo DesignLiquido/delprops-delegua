@@ -4,7 +4,7 @@ var registroDelprops = importar("../fontes/registro.delegua")
 var modelos = importar("../fontes/modelos.delegua")
 
 funcao definicao(nome) {
-    retorna modelos.DefinicaoPropriedade(nome, "texto", "Detalhe de " + nome + ".", nulo, nulo)
+    retorna modelos.DefinicaoPropriedade(nome, "texto", "Detalhe de " + nome + ".", nulo, [])
 }
 
 grupo("Registro", funcao() {

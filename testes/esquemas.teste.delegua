@@ -6,29 +6,29 @@ var json = importar("../fontes/utilidades/json.delegua")
 
 grupo("JSONC", funcao() {
     teste("remove comentários de linha e de bloco", funcao() {
-        afirmar.igual("{\"a\": 1} ", json.removerComentarios("{\"a\": 1} // fim")["resultado"])
-        afirmar.igual("\n{}", json.removerComentarios("// início\n{}")["resultado"])
-        afirmar.igual("{\"a\": 1}", json.removerComentarios("{/* bloco */\"a\": 1}")["resultado"])
-        afirmar.igual("{}", json.removerComentarios("{/* várias\nlinhas */}")["resultado"])
-        afirmar.igual("{}", json.removerComentarios("{}/**/")["resultado"])
+        afirmar.igual("{\"a\": 1} ", json.removerComentarios("{\"a\": 1} // fim").textoLimpo)
+        afirmar.igual("\n{}", json.removerComentarios("// início\n{}").textoLimpo)
+        afirmar.igual("{\"a\": 1}", json.removerComentarios("{/* bloco */\"a\": 1}").textoLimpo)
+        afirmar.igual("{}", json.removerComentarios("{/* várias\nlinhas */}").textoLimpo)
+        afirmar.igual("{}", json.removerComentarios("{}/**/").textoLimpo)
     })
 
     teste("preserva // e /* dentro de textos", funcao() {
-        afirmar.igual("{\"url\": \"https://x\"}", json.removerComentarios("{\"url\": \"https://x\"}")["resultado"])
-        afirmar.igual("{\"a\": \"/* não */\"}", json.removerComentarios("{\"a\": \"/* não */\"}")["resultado"])
-        afirmar.igual("{\"a\": \"x\\\"// y\"}", json.removerComentarios("{\"a\": \"x\\\"// y\"}")["resultado"])
+        afirmar.igual("{\"url\": \"https://x\"}", json.removerComentarios("{\"url\": \"https://x\"}").textoLimpo)
+        afirmar.igual("{\"a\": \"/* não */\"}", json.removerComentarios("{\"a\": \"/* não */\"}").textoLimpo)
+        afirmar.igual("{\"a\": \"x\\\"// y\"}", json.removerComentarios("{\"a\": \"x\\\"// y\"}").textoLimpo)
     })
 
     teste("informa comentário de bloco não fechado", funcao() {
-        afirmar.igual("Comentário de bloco não fechado", json.removerComentarios("{} /* aberto")["erro"])
-        afirmar.igual("Comentário de bloco não fechado", json.analisarJsonc("{} /*")["erro"])
+        afirmar.igual("Comentário de bloco não fechado", json.removerComentarios("{} /* aberto").erro)
+        afirmar.igual("Comentário de bloco não fechado", json.analisarJsonc("{} /*").erro)
     })
 
     teste("analisa JSONC", funcao() {
         var lido = json.analisarJsonc("{\n  // nome\n  \"nome\": \"x\",\n  \"lista\": [1, 2] /* fim */\n}")
-        afirmar.igual("", lido["erro"])
-        afirmar.igual("x", lido["resultado"]["nome"])
-        afirmar.igual(2, lido["resultado"]["lista"].tamanho())
+        afirmar.igual("", lido.erro)
+        afirmar.igual("x", lido.valor.textoDoCampo("nome"))
+        afirmar.igual(2, lido.valor.campo("lista").itens.tamanho())
     })
 })
 
@@ -41,8 +41,8 @@ grupo("Esquemas", funcao() {
 
     teste("lê esquemas de texto JSON", funcao() {
         var resultado = esquemasCli.esquemasDeTexto("{ \"meu\": [ { \"nome\": \"modo\", \"tipo\": \"texto\", \"detalhe\": \"Modo.\", \"padrao\": \"'a'\", \"valoresPermitidos\": [\"a\", \"b\"] } ], \"ignorado\": 3 }")
-        afirmar.igual("", resultado["erro"])
-        var esquemas = resultado["esquemas"]
+        afirmar.igual("", resultado.erro)
+        var esquemas = resultado.esquemas
         afirmar.igual("meu", esquemas.chaves().juntar(","))
         var definicao = esquemas["meu"][0]
         afirmar.igual("modo", definicao.nome)
@@ -52,14 +52,14 @@ grupo("Esquemas", funcao() {
     })
 
     teste("informa JSON inválido ou que não é objeto", funcao() {
-        afirmar.diferente("", esquemasCli.esquemasDeTexto("{ quebrado")["erro"])
-        afirmar.igual("Esperado um objeto JSON de espaços de nomes.", esquemasCli.esquemasDeTexto("[1]")["erro"])
+        afirmar.diferente("", esquemasCli.esquemasDeTexto("{ quebrado").erro)
+        afirmar.igual("Esperado um objeto JSON de espaços de nomes.", esquemasCli.esquemasDeTexto("[1]").erro)
     })
 
     teste("mescla esquemas sem perder os existentes", funcao() {
         var base = esquemasCli.obterEsquemasEmbutidos()
-        var extra = [modelos.DefinicaoPropriedade("extra", "logico", "Extra.", nulo, nulo)]
-        var novo = [modelos.DefinicaoPropriedade("x", "numero", "X.", nulo, nulo)]
+        var extra = [modelos.DefinicaoPropriedade("extra", "logico", "Extra.", "", [])]
+        var novo = [modelos.DefinicaoPropriedade("x", "numero", "X.", "", [])]
         var adicionais = {}
         adicionais["liquido.roteador"] = extra
         adicionais["novo"] = novo

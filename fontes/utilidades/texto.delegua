@@ -1,42 +1,36 @@
 // Utilidades de texto. As primitivas de texto da realização node não têm `comecaCom`,
 // e `substituir` troca apenas a primeira ocorrência.
 
-funcao comecaCom(textoOriginal, prefixo) {
-    var textoBase = "" + textoOriginal
-    var inicio = "" + prefixo
+funcao comecaCom(textoBase: texto, inicio: texto): lógico {
     se (inicio.tamanho() > textoBase.tamanho()) { retorna falso }
     retorna textoBase.subtexto(0, inicio.tamanho()) == inicio
 }
 
-funcao terminaCom(textoOriginal, sufixo) {
-    var textoBase = "" + textoOriginal
-    var fim = "" + sufixo
+funcao terminaCom(textoBase: texto, fim: texto): lógico {
     se (fim.tamanho() > textoBase.tamanho()) { retorna falso }
     retorna textoBase.subtexto(textoBase.tamanho() - fim.tamanho(), textoBase.tamanho()) == fim
 }
 
-funcao substituirTodos(textoOriginal, procurado, substituto) {
-    var textoBase = "" + textoOriginal
+funcao substituirTodos(textoBase: texto, procurado: texto, substituto: texto): texto {
     se (procurado == "") { retorna textoBase }
     retorna textoBase.dividir(procurado).juntar(substituto)
 }
 
-funcao ehDigito(caractere) {
+funcao ehDigito(caractere: texto): lógico {
     retorna caractere != "" e "0123456789".inclui(caractere)
 }
 
 // Equivale à expressão regular /^-?\d+(\.\d+)?$/.
-funcao ehNumeroDecimal(valor) {
-    var textoValor = "" + valor
-    var i = 0
+funcao ehNumeroDecimal(textoValor: texto): lógico {
+    var i: inteiro = 0
     se (textoValor.tamanho() > 0 e textoValor[0] == "-") { i = 1 }
-    var inicioInteiro = i
+    var inicioInteiro: inteiro = i
     enquanto (i < textoValor.tamanho() e ehDigito(textoValor[i])) { i = i + 1 }
     se (i == inicioInteiro) { retorna falso }
     se (i == textoValor.tamanho()) { retorna verdadeiro }
     se (textoValor[i] != ".") { retorna falso }
     i = i + 1
-    var inicioFracao = i
+    var inicioFracao: inteiro = i
     enquanto (i < textoValor.tamanho() e ehDigito(textoValor[i])) { i = i + 1 }
     retorna i > inicioFracao e i == textoValor.tamanho()
 }

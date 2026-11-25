@@ -1,8 +1,9 @@
 // Propriedades de liquido.linguagem.
-importar tudo como modelos de "../modelos.delegua"
+importar { DefinicaoPropriedade } de "../modelos.delegua"
 
-funcao definicoes() {
-    retorna [
-        modelos.DefinicaoPropriedade("linguagem", "texto", "Linguagem de programação de back-end do projeto.", nulo, ["delégua", "pituguês"])
+funcao definicoes(): DefinicaoPropriedade[] {
+    var lista: DefinicaoPropriedade[] = [
+        DefinicaoPropriedade("linguagem", "texto", "Linguagem de programação de back-end do projeto.", "", ["delégua", "pituguês"])
     ]
+    retorna lista
 }

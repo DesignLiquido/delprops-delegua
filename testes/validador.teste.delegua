@@ -7,19 +7,19 @@ var modelos = importar("../fontes/modelos.delegua")
 // o interpretador os libera no fim da função.
 funcao esquemasTeste() {
     var roteador = [
-        modelos.DefinicaoPropriedade("cors", "logico", "Habilita CORS.", "falso", nulo),
-        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", "3000", nulo),
-        modelos.DefinicaoPropriedade("diretorioEstatico", "texto", "Diretório estático.", "'publico'", nulo)
+        modelos.DefinicaoPropriedade("cors", "logico", "Habilita CORS.", "falso", []),
+        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", "3000", []),
+        modelos.DefinicaoPropriedade("diretorioEstatico", "texto", "Diretório estático.", "'publico'", [])
     ]
     var dados = [
-        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["sqlite", "mysql"]),
-        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", nulo, nulo)
+        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", "", ["sqlite", "mysql"]),
+        modelos.DefinicaoPropriedade("porta", "numero", "Porta.", "", [])
     ]
     var autenticacao = [
-        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["jwt"])
+        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", "", ["jwt"])
     ]
     var arquetipo = [
-        modelos.DefinicaoPropriedade("arquetipo", "texto", "Arquétipo.", nulo, ["rest", "mvc"])
+        modelos.DefinicaoPropriedade("arquetipo", "texto", "Arquétipo.", "", ["rest", "mvc"])
     ]
     var esquemas = {}
     esquemas["liquido.roteador"] = roteador
@@ -56,14 +56,14 @@ grupo("Validador: inferirTipo", funcao() {
     })
 
     teste("valores sem tipo conhecido", funcao() {
-        afirmar.nulo(validador.inferirTipo("talvez"))
-        afirmar.nulo(validador.inferirTipo("'"))
-        afirmar.nulo(validador.inferirTipo("'aberto"))
-        afirmar.nulo(validador.inferirTipo("\"duplas\""))
-        afirmar.nulo(validador.inferirTipo("1."))
-        afirmar.nulo(validador.inferirTipo(".5"))
-        afirmar.nulo(validador.inferirTipo("-"))
-        afirmar.nulo(validador.inferirTipo("1e5"))
+        afirmar.igual("", validador.inferirTipo("talvez"))
+        afirmar.igual("", validador.inferirTipo("'"))
+        afirmar.igual("", validador.inferirTipo("'aberto"))
+        afirmar.igual("", validador.inferirTipo("\"duplas\""))
+        afirmar.igual("", validador.inferirTipo("1."))
+        afirmar.igual("", validador.inferirTipo(".5"))
+        afirmar.igual("", validador.inferirTipo("-"))
+        afirmar.igual("", validador.inferirTipo("1e5"))
     })
 })
 
@@ -157,7 +157,7 @@ grupo("Validador: validar", funcao() {
 
     teste("prefere o espaço de nomes mais específico", funcao() {
         var esquemas = esquemasTeste()
-        var generico = [modelos.DefinicaoPropriedade("roteador.cors", "texto", "Genérico.", nulo, nulo)]
+        var generico = [modelos.DefinicaoPropriedade("roteador.cors", "texto", "Genérico.", "", [])]
         esquemas["liquido"] = generico
         var propriedades = [modelos.PropriedadeCompreendida("liquido.roteador.cors", "verdadeiro", 1)]
         var resultado = validador.validar(propriedades, esquemas)
@@ -167,7 +167,7 @@ grupo("Validador: validar", funcao() {
     teste("une valores permitidos de definições repetidas", funcao() {
         var esquemas = esquemasTeste()
         var dados = esquemas["liquido.dados"]
-        dados.adicionar(modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", nulo, ["duckdb"]))
+        dados.adicionar(modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia.", "", ["duckdb"]))
         var propriedades = [
             modelos.PropriedadeCompreendida("liquido.dados.a.tecnologia", "'sqlite'", 1),
             modelos.PropriedadeCompreendida("liquido.dados.b.tecnologia", "'duckdb'", 2),

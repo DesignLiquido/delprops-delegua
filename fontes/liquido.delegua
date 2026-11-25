@@ -6,25 +6,33 @@ importar tudo como roteadorLiquido de "./liquido/roteador.delegua"
 importar tudo como dadosLiquido de "./liquido/dados.delegua"
 importar tudo como autenticacaoLiquido de "./liquido/autenticacao.delegua"
 importar tudo como estilosLiquido de "./liquido/estilos.delegua"
+importar { DefinicaoPropriedade } de "./modelos.delegua"
 
-funcao arquetipo() { retorna arquetipoLiquido.definicoes() }
-funcao linguagem() { retorna linguagemLiquido.definicoes() }
-funcao aplicacao() { retorna aplicacaoLiquido.definicoes() }
-funcao roteador() { retorna roteadorLiquido.definicoes() }
+funcao arquetipo(): DefinicaoPropriedade[] { retorna arquetipoLiquido.definicoes() }
+funcao linguagem(): DefinicaoPropriedade[] { retorna linguagemLiquido.definicoes() }
+funcao aplicacao(): DefinicaoPropriedade[] { retorna aplicacaoLiquido.definicoes() }
+funcao roteador(): DefinicaoPropriedade[] { retorna roteadorLiquido.definicoes() }
 // Fonte de dados genérica: liquido.dados.<nome>.*
-funcao dados() { retorna dadosLiquido.definicoes() }
-funcao autenticacao() { retorna autenticacaoLiquido.definicoes() }
-funcao estilos() { retorna estilosLiquido.definicoes() }
+funcao dados(): DefinicaoPropriedade[] { retorna dadosLiquido.definicoes() }
+funcao autenticacao(): DefinicaoPropriedade[] { retorna autenticacaoLiquido.definicoes() }
+funcao estilos(): DefinicaoPropriedade[] { retorna estilosLiquido.definicoes() }
 
 // Espaço de nomes → definições, na ordem de exibição.
-funcao esquemas() {
-    var resultado = {}
-    resultado["liquido.arquetipo"] = arquetipo()
-    resultado["liquido.linguagem"] = linguagem()
-    resultado["liquido.aplicacao"] = aplicacao()
-    resultado["liquido.roteador"] = roteador()
-    resultado["liquido.dados"] = dados()
-    resultado["liquido.autenticacao"] = autenticacao()
-    resultado["liquido.estilos"] = estilos()
+funcao esquemas(): dicionário {
+    var resultado: dicionário = {}
+    var arquetipoDefinicoes: DefinicaoPropriedade[] = arquetipo()
+    resultado["liquido.arquetipo"] = arquetipoDefinicoes
+    var linguagemDefinicoes: DefinicaoPropriedade[] = linguagem()
+    resultado["liquido.linguagem"] = linguagemDefinicoes
+    var aplicacaoDefinicoes: DefinicaoPropriedade[] = aplicacao()
+    resultado["liquido.aplicacao"] = aplicacaoDefinicoes
+    var roteadorDefinicoes: DefinicaoPropriedade[] = roteador()
+    resultado["liquido.roteador"] = roteadorDefinicoes
+    var dadosDefinicoes: DefinicaoPropriedade[] = dados()
+    resultado["liquido.dados"] = dadosDefinicoes
+    var autenticacaoDefinicoes: DefinicaoPropriedade[] = autenticacao()
+    resultado["liquido.autenticacao"] = autenticacaoDefinicoes
+    var estilosDefinicoes: DefinicaoPropriedade[] = estilos()
+    resultado["liquido.estilos"] = estilosDefinicoes
     retorna resultado
 }

@@ -1,0 +1,35 @@
+// Sistema de arquivos de descoberta sobre a biblioteca `arquivos`, que existe nas
+// realizações node e llvm.
+importar tudo como arquivos de "arquivos"
+importar { EntradaDiretorio, SistemaArquivosDescoberta } de "./modelos.delegua"
+
+classe SistemaArquivosLocal herda SistemaArquivosDescoberta {
+    construtor() {}
+
+    existe(caminho: texto): lógico {
+        retorna arquivos.existe(caminho)
+    }
+
+    listarDiretorio(caminho: texto): EntradaDiretorio[] {
+        var entradas: EntradaDiretorio[] = []
+        var nomes: texto[] = arquivos.listarDiretorio(caminho)
+        para (var i = 0; i < nomes.tamanho(); i = i + 1) {
+            var nome: texto = nomes[i]
+            var ehDiretorio: lógico = arquivos.eDiretorio(arquivos.juntarCaminhos(caminho, nome))
+            entradas.adicionar(EntradaDiretorio(nome, ehDiretorio))
+        }
+        retorna entradas
+    }
+
+    lerTexto(caminho: texto): texto {
+        retorna arquivos.lerTexto(caminho)
+    }
+
+    juntarCaminhos(base: texto, parte: texto): texto {
+        retorna arquivos.juntarCaminhos(base, parte)
+    }
+}
+
+funcao sistemaArquivosLocal(): SistemaArquivosLocal {
+    retorna SistemaArquivosLocal()
+}

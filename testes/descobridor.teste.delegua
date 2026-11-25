@@ -3,7 +3,7 @@ importar { grupo, teste, afirmar } de "testes"
 var descobridor = importar("../fontes/descobridor.delegua")
 var registroDelprops = importar("../fontes/registro.delegua")
 var auxiliares = importar("./auxiliares.delegua")
-var sistemaArquivosNode = importar("../fontes/sistema_arquivos_node.delegua")
+var sistemaArquivosLocal = importar("../fontes/sistema_arquivos.delegua")
 
 funcao manifestoDados(nome) {
     retorna "{ \"nome\": \"" + nome + "\", \"delprops\": { \"espacoNomes\": \"liquido.dados\", \"esquema\": \"delprops/dados.json\" } }"
@@ -81,8 +81,8 @@ grupo("Descobridor", funcao() {
         afirmar.igual(0, registro.obterTodos().chaves().tamanho())
     })
 
-    teste("descobre pacotes reais com o sistema de arquivos node", funcao() {
-        var sistema = sistemaArquivosNode.sistemaArquivosNode()
+    teste("descobre pacotes reais com o sistema de arquivos local", funcao() {
+        var sistema = sistemaArquivosLocal.sistemaArquivosLocal()
         var entradas = sistema.listarDiretorio("testes/exemplos/pacotes")
         afirmar.igual("llvm,node", entradas.mapear(funcao(entrada) { retorna entrada.nome }).juntar(","))
         afirmar.verdadeiro(entradas[0].ehDiretorio)

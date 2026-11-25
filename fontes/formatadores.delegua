@@ -1,24 +1,34 @@
 // Formatação dos resultados da linha de comando para exibição no terminal.
+importar {
+    AvisoValidacao,
+    DefinicaoPropriedade,
+    ErroCompreensao,
+    ErroValidacao,
+    ItemInfo,
+    PropriedadeCompreendida,
+    ResultadoCompreensao,
+    ResultadoValidacao
+} de "./modelos.delegua"
 
 // Formata um ResultadoValidacao.
-funcao formatarValidacao(validacao) {
-    var linhas = []
-    var totalAvisos = validacao.avisos.tamanho()
-    var totalErros = validacao.erros.tamanho()
+funcao formatarValidacao(validacao: ResultadoValidacao): texto {
+    var linhas: texto[] = []
+    var totalAvisos: inteiro = validacao.avisos.tamanho()
+    var totalErros: inteiro = validacao.erros.tamanho()
 
     se (totalAvisos == 0 e totalErros == 0) {
         retorna "Arquivo válido. Nenhum aviso ou erro encontrado."
     }
 
     para (var i = 0; i < totalAvisos; i = i + 1) {
-        var aviso = validacao.avisos[i]
+        var aviso: AvisoValidacao = validacao.avisos[i]
         linhas.adicionar("[Aviso] Linha " + texto(aviso.linha) + ": " + aviso.chave + " — " + aviso.mensagem)
     }
 
     para (var j = 0; j < totalErros; j = j + 1) {
-        var erro = validacao.erros[j]
-        var prefixo = ""
-        se (erro.chave != nulo e erro.chave != "") { prefixo = erro.chave + " — " }
+        var erro: ErroValidacao = validacao.erros[j]
+        var prefixo: texto = ""
+        se (erro.chave != "") { prefixo = erro.chave + " — " }
         linhas.adicionar("[Erro] Linha " + texto(erro.linha) + ": " + prefixo + erro.mensagem)
     }
 
@@ -28,13 +38,13 @@ funcao formatarValidacao(validacao) {
 }
 
 // Formata um ResultadoCompreensao.
-funcao formatarCompreensao(resultado) {
-    var linhas = []
+funcao formatarCompreensao(resultado: ResultadoCompreensao): texto {
+    var linhas: texto[] = []
 
     se (resultado.propriedades.tamanho() > 0) {
         linhas.adicionar("Propriedades encontradas:")
         para (var i = 0; i < resultado.propriedades.tamanho(); i = i + 1) {
-            var propriedade = resultado.propriedades[i]
+            var propriedade: PropriedadeCompreendida = resultado.propriedades[i]
             linhas.adicionar("  Linha " + texto(propriedade.linha) + ": " + propriedade.chave + " = " + propriedade.valor)
         }
     } senao {
@@ -45,7 +55,7 @@ funcao formatarCompreensao(resultado) {
         linhas.adicionar("")
         linhas.adicionar("Erros de sintaxe:")
         para (var j = 0; j < resultado.erros.tamanho(); j = j + 1) {
-            var erro = resultado.erros[j]
+            var erro: ErroCompreensao = resultado.erros[j]
             linhas.adicionar("  Linha " + texto(erro.linha) + ": " + erro.mensagem)
         }
     }
@@ -53,28 +63,24 @@ funcao formatarCompreensao(resultado) {
     retorna linhas.juntar("\n")
 }
 
-funcao temValoresPermitidos(definicao) {
-    retorna definicao.valoresPermitidos != nulo e definicao.valoresPermitidos.tamanho() > 0
-}
-
 // Formata a listagem de espaços de nomes e propriedades disponíveis.
-funcao formatarEsquemas(esquemas) {
-    var linhas = []
+funcao formatarEsquemas(esquemas: dicionário): texto {
+    var linhas: texto[] = []
     linhas.adicionar("Espaços de nomes e propriedades disponíveis:")
     linhas.adicionar("")
 
-    var espacos = esquemas.chaves()
+    var espacos: texto[] = esquemas.chaves()
     para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-        var espaco = espacos[i]
-        var definicoes = esquemas[espaco]
+        var espaco: texto = espacos[i]
+        var definicoes: DefinicaoPropriedade[] = esquemas[espaco]
         linhas.adicionar("  " + espaco + ":")
 
         para (var j = 0; j < definicoes.tamanho(); j = j + 1) {
-            var definicao = definicoes[j]
-            var textoPadrao = ""
-            se (definicao.valorPadrao != nulo e definicao.valorPadrao != "") { textoPadrao = " (padrão: " + definicao.valorPadrao + ")" }
-            var permitidos = ""
-            se (definicao.valoresPermitidos != nulo) { permitidos = " [" + definicao.valoresPermitidos.juntar(", ") + "]" }
+            var definicao: DefinicaoPropriedade = definicoes[j]
+            var textoPadrao: texto = ""
+            se (definicao.valorPadrao != "") { textoPadrao = " (padrão: " + definicao.valorPadrao + ")" }
+            var permitidos: texto = ""
+            se (definicao.temValoresPermitidos()) { permitidos = " [" + definicao.valoresPermitidos.juntar(", ") + "]" }
             linhas.adicionar("    • " + definicao.nome + " (" + definicao.tipoValor + ")" + permitidos + textoPadrao)
             linhas.adicionar("      " + definicao.detalhe)
         }
@@ -85,28 +91,27 @@ funcao formatarEsquemas(esquemas) {
     retorna linhas.juntar("\n")
 }
 
-// Formata as informações de uma propriedade. `resultados` é um vetor de dicionários
-// { "espacoNomes": texto, "definicao": DefinicaoPropriedade }.
-funcao formatarInfo(resultados) {
+// Formata as informações de uma propriedade encontrada em um ou mais espaços de nomes.
+funcao formatarInfo(resultados: ItemInfo[]): texto {
     se (resultados.tamanho() == 0) {
         retorna "Nenhuma propriedade encontrada com esse nome."
     }
 
-    var linhas = []
+    var linhas: texto[] = []
     para (var i = 0; i < resultados.tamanho(); i = i + 1) {
-        var item = resultados[i]
-        var definicao = item["definicao"]
+        var item: ItemInfo = resultados[i]
+        var definicao: DefinicaoPropriedade = item.definicao
 
         linhas.adicionar("Propriedade: " + definicao.nome)
-        linhas.adicionar("  Espaço de nomes: " + item["espacoNomes"])
+        linhas.adicionar("  Espaço de nomes: " + item.espacoNomes)
         linhas.adicionar("  Tipo:      " + definicao.tipoValor)
         linhas.adicionar("  Detalhe:   " + definicao.detalhe)
 
-        se (temValoresPermitidos(definicao)) {
+        se (definicao.temValoresPermitidos()) {
             linhas.adicionar("  Valores permitidos: [" + definicao.valoresPermitidos.juntar(", ") + "]")
         }
 
-        se (definicao.valorPadrao != nulo) {
+        se (definicao.valorPadrao != "") {
             linhas.adicionar("  Padrão:    " + definicao.valorPadrao)
         }
 
@@ -117,8 +122,8 @@ funcao formatarInfo(resultados) {
 }
 
 // Texto de ajuda da linha de comando.
-funcao formatarAjuda() {
-    retorna [
+funcao formatarAjuda(): texto {
+    var linhas: texto[] = [
         "delprops — Ferramenta de linha de comando para arquivos .delprops",
         "",
         "Uso:",
@@ -145,5 +150,6 @@ funcao formatarAjuda() {
         "  delprops info cors",
         "  delprops info tecnologia",
         "  delprops esquemas"
-    ].juntar("\n")
+    ]
+    retorna linhas.juntar("\n")
 }

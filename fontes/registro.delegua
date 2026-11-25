@@ -4,7 +4,7 @@
 // instância nova do módulo, então variáveis de módulo não são compartilhadas entre quem
 // importa. Crie um registro com `criarRegistro()` e passe-o adiante (por exemplo, para
 // `descobrir`).
-importar tudo como modelos de "./modelos.delegua"
+importar { ContribuicaoEsquema, DefinicaoPropriedade } de "./modelos.delegua"
 
 classe RegistroEsquemas {
     // Espaço de nomes → vetor de ContribuicaoEsquema.
@@ -18,24 +18,24 @@ classe RegistroEsquemas {
     //
     // Exemplo:
     //     registro.registrar("liquido.dados", "lincones-sqlite", definicoes)
-    registrar(espacoNomes, pacote, definicoes) {
+    registrar(espacoNomes: texto, pacote: texto, definicoes: DefinicaoPropriedade[]) {
         se (nao isto.registros.contem(espacoNomes)) {
             // Por uma variável local: um vetor literal atribuído direto a um índice de
             // dicionário é liberado no fim da função.
-            var novas = []
+            var novas: ContribuicaoEsquema[] = []
             isto.registros[espacoNomes] = novas
         }
-        var contribuicoes = isto.registros[espacoNomes]
-        contribuicoes.adicionar(modelos.ContribuicaoEsquema(pacote, definicoes))
+        var contribuicoes: ContribuicaoEsquema[] = isto.registros[espacoNomes]
+        contribuicoes.adicionar(ContribuicaoEsquema(pacote, definicoes))
     }
 
     // Todas as definições registradas para o espaço de nomes, de todos os pacotes.
-    obter(espacoNomes) {
-        var definicoes = []
+    obter(espacoNomes: texto): DefinicaoPropriedade[] {
+        var definicoes: DefinicaoPropriedade[] = []
         se (nao isto.registros.contem(espacoNomes)) { retorna definicoes }
-        var contribuicoes = isto.registros[espacoNomes]
+        var contribuicoes: ContribuicaoEsquema[] = isto.registros[espacoNomes]
         para (var i = 0; i < contribuicoes.tamanho(); i = i + 1) {
-            var contribuicao = contribuicoes[i]
+            var contribuicao: ContribuicaoEsquema = contribuicoes[i]
             para (var j = 0; j < contribuicao.definicoes.tamanho(); j = j + 1) {
                 definicoes.adicionar(contribuicao.definicoes[j])
             }
@@ -44,31 +44,35 @@ classe RegistroEsquemas {
     }
 
     // Verdadeiro se ao menos um pacote registrou esquema para o espaço de nomes.
-    temRegistro(espacoNomes) {
-        retorna isto.registros.contem(espacoNomes) e isto.registros[espacoNomes].tamanho() > 0
+    temRegistro(espacoNomes: texto): lógico {
+        se (nao isto.registros.contem(espacoNomes)) { retorna falso }
+        var contribuicoes: ContribuicaoEsquema[] = isto.registros[espacoNomes]
+        retorna contribuicoes.tamanho() > 0
     }
 
     // O dicionário completo: espaço de nomes → vetor de ContribuicaoEsquema.
-    obterTodos() {
+    obterTodos(): dicionário {
         retorna isto.registros
     }
 
     // Esquemas no formato aceito por `validar`: espaço de nomes → definições.
-    obterEsquemas() {
-        var esquemas = {}
-        var espacos = isto.registros.chaves()
+    obterEsquemas(): dicionário {
+        var esquemas: dicionário = {}
+        var espacos: texto[] = isto.registros.chaves()
         para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-            esquemas[espacos[i]] = isto.obter(espacos[i])
+            var definicoes: DefinicaoPropriedade[] = isto.obter(espacos[i])
+            esquemas[espacos[i]] = definicoes
         }
         retorna esquemas
     }
 
     // Verdadeiro se o pacote já contribuiu para o espaço de nomes.
-    pacoteRegistrado(espacoNomes, pacote) {
+    pacoteRegistrado(espacoNomes: texto, pacote: texto): lógico {
         se (nao isto.registros.contem(espacoNomes)) { retorna falso }
-        var contribuicoes = isto.registros[espacoNomes]
+        var contribuicoes: ContribuicaoEsquema[] = isto.registros[espacoNomes]
         para (var i = 0; i < contribuicoes.tamanho(); i = i + 1) {
-            se (contribuicoes[i].pacote == pacote) { retorna verdadeiro }
+            var contribuicao: ContribuicaoEsquema = contribuicoes[i]
+            se (contribuicao.pacote == pacote) { retorna verdadeiro }
         }
         retorna falso
     }
@@ -79,6 +83,6 @@ classe RegistroEsquemas {
     }
 }
 
-funcao criarRegistro() {
+funcao criarRegistro(): RegistroEsquemas {
     retorna RegistroEsquemas()
 }

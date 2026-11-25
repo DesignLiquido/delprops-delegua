@@ -2,73 +2,79 @@
 importar tudo como modelos de "./modelos.delegua"
 importar tudo como liquido de "./liquido.delegua"
 importar tudo como json de "./utilidades/json.delegua"
+importar { DefinicaoPropriedade, SistemaCli } de "./modelos.delegua"
+importar { ResultadoJson, ValorJson } de "./utilidades/json.delegua"
+
+// Resultado de `esquemasDeTexto`: `erro` vazio indica sucesso.
+classe ResultadoEsquemas {
+    // Espaço de nomes → vetor de DefinicaoPropriedade.
+    esquemas: dicionário
+    erro: texto
+
+    construtor(esquemas: dicionário, erro: texto) {
+        isto.esquemas = esquemas
+        isto.erro = erro
+    }
+}
 
 // Esquemas embutidos (liquido.*): espaço de nomes → vetor de DefinicaoPropriedade.
-funcao obterEsquemasEmbutidos() {
+funcao obterEsquemasEmbutidos(): dicionário {
     retorna liquido.esquemas()
 }
 
 // Converte um texto JSON (ou JSONC) `{ "<espaço de nomes>": [ definições ] }` em esquemas.
 // Itens que não são vetores, e definições inválidas, são ignorados.
-// Devolve { "esquemas": dicionário, "erro": "" }; `erro` não vazio indica falha.
-funcao esquemasDeTexto(conteudo) {
-    var lido = json.analisarJsonc(conteudo)
-    se (lido["erro"] != "") {
-        retorna { "esquemas": nulo, "erro": lido["erro"] }
+funcao esquemasDeTexto(conteudo: texto): ResultadoEsquemas {
+    var lido: ResultadoJson = json.analisarJsonc(conteudo)
+    se (lido.erro != "") {
+        retorna ResultadoEsquemas({}, lido.erro)
     }
-    var dados = lido["resultado"]
-    se (nao modelos.ehDicionario(dados)) {
-        retorna { "esquemas": nulo, "erro": "Esperado um objeto JSON de espaços de nomes." }
+    var dados: ValorJson = lido.valor
+    se (nao dados.ehObjeto()) {
+        retorna ResultadoEsquemas({}, "Esperado um objeto JSON de espaços de nomes.")
     }
-    var esquemas = {}
-    var espacos = dados.chaves()
-    para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-        var espaco = espacos[i]
-        var definicoes = dados[espaco]
-        se (modelos.ehVetor(definicoes)) {
-            esquemas[espaco] = modelos.definicoesDeVetor(definicoes)
+    var esquemas: dicionário = {}
+    para (var i = 0; i < dados.chaves.tamanho(); i = i + 1) {
+        var espaco: texto = dados.chaves[i]
+        var definicoesLidas: ValorJson = dados.campo(espaco)
+        se (definicoesLidas.ehVetor()) {
+            var definicoes: DefinicaoPropriedade[] = modelos.definicoesDeJson(definicoesLidas)
+            esquemas[espaco] = definicoes
         }
     }
-    retorna { "esquemas": esquemas, "erro": "" }
+    retorna ResultadoEsquemas(esquemas, "")
 }
 
 // Carrega esquemas de um arquivo JSON externo. Em caso de erro, escreve a mensagem pelo
-// sistema e devolve nulo.
-funcao carregarEsquemasDeArquivo(sistema, caminho) {
-    var caminhoAbsoluto = sistema.resolverCaminho(sistema.diretorioAtual(), caminho)
+// sistema e devolve um resultado com `erro` preenchido.
+funcao carregarEsquemasDeArquivo(sistema: SistemaCli, caminho: texto): ResultadoEsquemas {
+    var caminhoAbsoluto: texto = sistema.resolverCaminho(sistema.diretorioAtual(), caminho)
 
     se (nao sistema.existe(caminhoAbsoluto)) {
-        sistema.escreverErro("Arquivo de esquemas não encontrado: " + caminho + "\n")
-        retorna nulo
+        var mensagem: texto = "Arquivo de esquemas não encontrado: " + caminho
+        sistema.escreverErro(mensagem + "\n")
+        retorna ResultadoEsquemas({}, mensagem)
     }
 
-    var conteudo = nulo
-    tente {
-        conteudo = sistema.lerArquivo(caminhoAbsoluto)
-    } pegue (erro) {
-        sistema.escreverErro("Erro ao carregar esquemas de '" + caminho + "': " + texto(erro) + "\n")
-        retorna nulo
+    var conteudo: texto = sistema.lerArquivo(caminhoAbsoluto)
+    var resultado: ResultadoEsquemas = esquemasDeTexto(conteudo)
+    se (resultado.erro != "") {
+        sistema.escreverErro("Erro ao carregar esquemas de '" + caminho + "': " + resultado.erro + "\n")
     }
-
-    var resultado = esquemasDeTexto(conteudo)
-    se (resultado["erro"] != "") {
-        sistema.escreverErro("Erro ao carregar esquemas de '" + caminho + "': " + resultado["erro"] + "\n")
-        retorna nulo
-    }
-    retorna resultado["esquemas"]
+    retorna resultado
 }
 
 // Mescla os esquemas adicionais nos esquemas base (o dicionário base é alterado).
-funcao mesclarEsquemas(base, adicionais) {
-    var espacos = adicionais.chaves()
+funcao mesclarEsquemas(base: dicionário, adicionais: dicionário) {
+    var espacos: texto[] = adicionais.chaves()
     para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-        var espaco = espacos[i]
-        var mesclado = []
+        var espaco: texto = espacos[i]
+        var mesclado: DefinicaoPropriedade[] = []
         se (base.contem(espaco)) {
-            var existentes = base[espaco]
+            var existentes: DefinicaoPropriedade[] = base[espaco]
             para (var j = 0; j < existentes.tamanho(); j = j + 1) { mesclado.adicionar(existentes[j]) }
         }
-        var novos = adicionais[espaco]
+        var novos: DefinicaoPropriedade[] = adicionais[espaco]
         para (var k = 0; k < novos.tamanho(); k = k + 1) { mesclado.adicionar(novos[k]) }
         base[espaco] = mesclado
     }

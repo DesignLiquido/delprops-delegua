@@ -6,45 +6,46 @@
 // - Toda linha não vazia deve seguir `<chave> = <valor>`.
 // - Chave e valor não podem estar vazios.
 // - Uma chave não pode ser definida mais de uma vez.
-importar tudo como modelos de "./modelos.delegua"
 importar tudo como textos de "./utilidades/texto.delegua"
+importar { ErroCompreensao, PropriedadeCompreendida, ResultadoCompreensao } de "./modelos.delegua"
 
 // Devolve um ResultadoCompreensao com as propriedades compreendidas e os erros de sintaxe.
-funcao analisar(conteudo) {
-    var propriedades = []
-    var erros = []
-    var linhas = ("" + conteudo).dividir("\n")
-    var chavesVistas = {}
+funcao analisar(conteudo: texto): ResultadoCompreensao {
+    var propriedades: PropriedadeCompreendida[] = []
+    var erros: ErroCompreensao[] = []
+    var linhas: texto[] = conteudo.dividir("\n")
+    // Chave → linha onde foi definida.
+    var chavesVistas: dicionário = {}
 
     para (var i = 0; i < linhas.tamanho(); i = i + 1) {
-        var numeroLinha = i + 1
-        var linha = linhas[i].aparar()
+        var numeroLinha: inteiro = i + 1
+        var linha: texto = linhas[i].aparar()
 
         se (linha == "") { continua }
         se (textos.comecaCom(linha, "//")) { continua }
 
-        var indiceIgual = linha.encontrar("=")
+        var indiceIgual: inteiro = linha.encontrar("=")
         se (indiceIgual < 0) {
-            erros.adicionar(modelos.ErroCompreensao("Linha sem o separador '='.", numeroLinha))
+            erros.adicionar(ErroCompreensao("Linha sem o separador '='.", numeroLinha))
             continua
         }
 
-        var chave = linha.subtexto(0, indiceIgual).aparar()
-        var valor = linha.subtexto(indiceIgual + 1, linha.tamanho()).aparar()
+        var chave: texto = linha.subtexto(0, indiceIgual).aparar()
+        var valor: texto = linha.subtexto(indiceIgual + 1, linha.tamanho()).aparar()
 
         se (chave == "") {
-            erros.adicionar(modelos.ErroCompreensao("Chave vazia.", numeroLinha))
+            erros.adicionar(ErroCompreensao("Chave vazia.", numeroLinha))
             continua
         }
 
         se (valor == "") {
-            erros.adicionar(modelos.ErroCompreensao("Valor vazio para a chave '" + chave + "'.", numeroLinha))
+            erros.adicionar(ErroCompreensao("Valor vazio para a chave '" + chave + "'.", numeroLinha))
             continua
         }
 
         se (chavesVistas.contem(chave)) {
-            var linhaOriginal = chavesVistas[chave]
-            erros.adicionar(modelos.ErroCompreensao(
+            var linhaOriginal: inteiro = chavesVistas[chave]
+            erros.adicionar(ErroCompreensao(
                 "Chave duplicada '" + chave + "' (já definida na linha " + texto(linhaOriginal) + ").",
                 numeroLinha
             ))
@@ -52,8 +53,8 @@ funcao analisar(conteudo) {
         }
 
         chavesVistas[chave] = numeroLinha
-        propriedades.adicionar(modelos.PropriedadeCompreendida(chave, valor, numeroLinha))
+        propriedades.adicionar(PropriedadeCompreendida(chave, valor, numeroLinha))
     }
 
-    retorna modelos.ResultadoCompreensao(propriedades, erros)
+    retorna ResultadoCompreensao(propriedades, erros)
 }
