@@ -1,76 +1,73 @@
 // Linha de comando do DelProps: validar, compreender, info e esquemas.
 //
-// A lógica não depende da realização: toda interação com o sistema passa pelo objeto
-// `sistema`, que deve ter o campo `argumentos` (vetor de textos, sem o interpretador e o
-// programa) e os métodos
-//     lerArquivo(caminho) → texto
-//     diretorioAtual() → texto
-//     juntarCaminhos(base, parte) → texto
-//     resolverCaminho(base, caminho) → texto (absoluto)
-//     escreverSaida(texto)
-//     escreverErro(texto)
-//     encerrar(codigo)
-//     existe(caminho) → lógico
-// `sistemaCliNode()` (fontes/sistema_cli_node.delegua) implementa esses métodos na
-// realização node.
-importar tudo como modelos de "./modelos.delegua"
+// A lógica não depende da realização: toda interação com o sistema passa por um objeto que
+// implementa a interface SistemaCli (fontes/modelos.delegua). `sistemaCliLocal(argumentos)`
+// (fontes/sistema_cli.delegua) implementa essa interface sobre as bibliotecas `arquivos` e
+// `processo`.
 importar tudo como analisador de "./analisador.delegua"
 importar tudo como validador de "./validador.delegua"
 importar tudo como formatadores de "./formatadores.delegua"
 importar tudo como esquemasCli de "./esquemas.delegua"
 importar tudo como textos de "./utilidades/texto.delegua"
+importar {
+    DefinicaoPropriedade,
+    ErroCompreensao,
+    ErroValidacao,
+    ItemInfo,
+    OpcoesCli,
+    ResultadoCompreensao,
+    ResultadoValidacao,
+    SistemaCli
+} de "./modelos.delegua"
+importar { ResultadoEsquemas } de "./esquemas.delegua"
 
 // Mantenha igual ao campo "versao" de pacoteca.jsonc (verificado pelos testes).
-funcao versao() {
+funcao versao(): texto {
     retorna "0.1.0"
 }
 
-funcao opcoesComErro(comando, mensagem) {
-    var opcoes = modelos.OpcoesCli(comando)
+funcao opcoesComErro(comando: texto, mensagem: texto): OpcoesCli {
+    var opcoes: OpcoesCli = OpcoesCli(comando)
     opcoes.erro = mensagem
     retorna opcoes
 }
 
 // Interpreta os argumentos da linha de comando. Devolve um OpcoesCli.
-funcao compreenderArgumentos(argumentos) {
-    se (argumentos.tamanho() == 0 ou argumentos[0] == "--ajuda" ou argumentos[0] == "-h") {
-        retorna modelos.OpcoesCli("ajuda")
-    }
+funcao compreenderArgumentos(argumentos: texto[]): OpcoesCli {
+    se (argumentos.tamanho() == 0) { retorna OpcoesCli("ajuda") }
+    var comando: texto = argumentos[0]
 
-    se (argumentos[0] == "--versao" ou argumentos[0] == "-v") {
-        retorna modelos.OpcoesCli("versao")
-    }
-
-    var comando = argumentos[0]
-
-    se (comando == "esquemas") { retorna modelos.OpcoesCli(comando) }
+    se (comando == "--ajuda" ou comando == "-h") { retorna OpcoesCli("ajuda") }
+    se (comando == "--versao" ou comando == "-v") { retorna OpcoesCli("versao") }
+    se (comando == "esquemas") { retorna OpcoesCli(comando) }
 
     se (comando == "info") {
         se (argumentos.tamanho() < 2 ou textos.comecaCom(argumentos[1], "-")) {
             retorna opcoesComErro(comando, "O comando 'info' requer o nome de uma propriedade.")
         }
-        var opcoesInfo = modelos.OpcoesCli(comando)
+        var opcoesInfo: OpcoesCli = OpcoesCli(comando)
         opcoesInfo.nomePropriedade = argumentos[1]
         retorna opcoesInfo
     }
 
     se (comando == "validar" ou comando == "compreender") {
-        var opcoes = modelos.OpcoesCli(comando)
-        var i = 1
+        var opcoes: OpcoesCli = OpcoesCli(comando)
+        var i: inteiro = 1
         enquanto (i < argumentos.tamanho()) {
-            se (argumentos[i] == "--esquemas") {
+            var argumento: texto = argumentos[i]
+            se (argumento == "--esquemas") {
                 i = i + 1
                 se (i >= argumentos.tamanho() ou textos.comecaCom(argumentos[i], "-")) {
                     retorna opcoesComErro(comando, "A opção '--esquemas' requer um valor.")
                 }
                 opcoes.caminhoEsquemas = argumentos[i]
-            } senao se (opcoes.caminhoArquivo == nulo) {
-                opcoes.caminhoArquivo = argumentos[i]
+            } senao se (opcoes.caminhoArquivo == "") {
+                opcoes.caminhoArquivo = argumento
             }
             i = i + 1
         }
 
-        se (opcoes.caminhoArquivo == nulo) {
+        se (opcoes.caminhoArquivo == "") {
             retorna opcoesComErro(comando, "O comando '" + comando + "' requer o caminho de um arquivo .delprops.")
         }
         retorna opcoes
@@ -79,57 +76,58 @@ funcao compreenderArgumentos(argumentos) {
     retorna opcoesComErro("ajuda", "Comando desconhecido: '" + comando + "'.")
 }
 
-// Lê um arquivo relativo ao diretório atual. Em caso de erro, escreve a mensagem e
-// devolve nulo.
-funcao lerArquivoSeguro(sistema, caminho) {
-    var caminhoAbsoluto = sistema.resolverCaminho(sistema.diretorioAtual(), caminho)
+// Resultado de `lerArquivoSeguro`.
+classe LeituraArquivo {
+    encontrado: lógico
+    conteudo: texto
+
+    construtor(encontrado: lógico, conteudo: texto) {
+        isto.encontrado = encontrado
+        isto.conteudo = conteudo
+    }
+}
+
+// Lê um arquivo relativo ao diretório atual. Se o arquivo não existe, escreve a mensagem e
+// devolve uma leitura com `encontrado` falso.
+funcao lerArquivoSeguro(sistema: SistemaCli, caminho: texto): LeituraArquivo {
+    var caminhoAbsoluto: texto = sistema.resolverCaminho(sistema.diretorioAtual(), caminho)
 
     se (nao sistema.existe(caminhoAbsoluto)) {
         sistema.escreverErro("Arquivo não encontrado: " + caminho + "\n")
-        retorna nulo
+        retorna LeituraArquivo(falso, "")
     }
-
-    var conteudo = nulo
-    tente {
-        conteudo = sistema.lerArquivo(caminhoAbsoluto)
-    } pegue (erro) {
-        sistema.escreverErro("Erro ao ler o arquivo: " + texto(erro) + "\n")
-        retorna nulo
-    }
-    retorna conteudo
+    retorna LeituraArquivo(verdadeiro, sistema.lerArquivo(caminhoAbsoluto))
 }
 
-// Esquemas embutidos, mais os adicionais (se houver).
-funcao montarEsquemas(esquemasAdicionais) {
-    var esquemas = esquemasCli.obterEsquemasEmbutidos()
-    se (esquemasAdicionais != nulo) {
-        esquemasCli.mesclarEsquemas(esquemas, esquemasAdicionais)
-    }
+// Esquemas embutidos, mais os adicionais.
+funcao montarEsquemas(esquemasAdicionais: dicionário): dicionário {
+    var esquemas: dicionário = esquemasCli.obterEsquemasEmbutidos()
+    esquemasCli.mesclarEsquemas(esquemas, esquemasAdicionais)
     retorna esquemas
 }
 
-funcao comandoAjuda(sistema) {
+funcao comandoAjuda(sistema: SistemaCli): inteiro {
     sistema.escreverSaida(formatadores.formatarAjuda() + "\n")
     retorna 0
 }
 
-funcao comandoVersao(sistema) {
+funcao comandoVersao(sistema: SistemaCli): inteiro {
     sistema.escreverSaida("delprops v" + versao() + "\n")
     retorna 0
 }
 
-funcao comandoInfo(sistema, nomePropriedade, esquemasAdicionais) {
-    var esquemas = montarEsquemas(esquemasAdicionais)
-    var resultados = []
+funcao comandoInfo(sistema: SistemaCli, nomePropriedade: texto, esquemasAdicionais: dicionário): inteiro {
+    var esquemas: dicionário = montarEsquemas(esquemasAdicionais)
+    var resultados: ItemInfo[] = []
 
-    var espacos = esquemas.chaves()
+    var espacos: texto[] = esquemas.chaves()
     para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-        var espaco = espacos[i]
-        var definicoes = esquemas[espaco]
+        var espaco: texto = espacos[i]
+        var definicoes: DefinicaoPropriedade[] = esquemas[espaco]
         para (var j = 0; j < definicoes.tamanho(); j = j + 1) {
-            var definicao = definicoes[j]
+            var definicao: DefinicaoPropriedade = definicoes[j]
             se (definicao.nome == nomePropriedade) {
-                resultados.adicionar({ "espacoNomes": espaco, "definicao": definicao })
+                resultados.adicionar(ItemInfo(espaco, definicao))
             }
         }
     }
@@ -139,46 +137,44 @@ funcao comandoInfo(sistema, nomePropriedade, esquemasAdicionais) {
     retorna 0
 }
 
-funcao comandoEsquemas(sistema, esquemasAdicionais) {
-    var esquemas = montarEsquemas(esquemasAdicionais)
+funcao comandoEsquemas(sistema: SistemaCli, esquemasAdicionais: dicionário): inteiro {
+    var esquemas: dicionário = montarEsquemas(esquemasAdicionais)
     sistema.escreverSaida(formatadores.formatarEsquemas(esquemas))
     sistema.escreverSaida("\n")
     retorna 0
 }
 
-funcao comandoCompreender(sistema, caminhoArquivo) {
-    var conteudo = lerArquivoSeguro(sistema, caminhoArquivo)
-    se (conteudo == nulo) { retorna 1 }
+funcao comandoCompreender(sistema: SistemaCli, caminhoArquivo: texto): inteiro {
+    var leitura: LeituraArquivo = lerArquivoSeguro(sistema, caminhoArquivo)
+    se (nao leitura.encontrado) { retorna 1 }
 
-    var resultado = analisador.analisar(conteudo)
+    var resultado: ResultadoCompreensao = analisador.analisar(leitura.conteudo)
     sistema.escreverSaida(formatadores.formatarCompreensao(resultado) + "\n")
     se (resultado.erros.tamanho() > 0) { retorna 1 }
     retorna 0
 }
 
-funcao comandoValidar(sistema, caminhoArquivo, caminhoEsquemas, esquemasAdicionais) {
-    var conteudo = lerArquivoSeguro(sistema, caminhoArquivo)
-    se (conteudo == nulo) { retorna 1 }
+funcao comandoValidar(sistema: SistemaCli, caminhoArquivo: texto, caminhoEsquemas: texto, esquemasAdicionais: dicionário): inteiro {
+    var leitura: LeituraArquivo = lerArquivoSeguro(sistema, caminhoArquivo)
+    se (nao leitura.encontrado) { retorna 1 }
 
-    var esquemas = esquemasCli.obterEsquemasEmbutidos()
+    var esquemas: dicionário = esquemasCli.obterEsquemasEmbutidos()
 
-    se (caminhoEsquemas != nulo) {
-        var esquemasExternos = esquemasCli.carregarEsquemasDeArquivo(sistema, caminhoEsquemas)
-        se (esquemasExternos == nulo) { retorna 1 }
-        esquemasCli.mesclarEsquemas(esquemas, esquemasExternos)
+    se (caminhoEsquemas != "") {
+        var externos: ResultadoEsquemas = esquemasCli.carregarEsquemasDeArquivo(sistema, caminhoEsquemas)
+        se (externos.erro != "") { retorna 1 }
+        esquemasCli.mesclarEsquemas(esquemas, externos.esquemas)
     }
 
-    se (esquemasAdicionais != nulo) {
-        esquemasCli.mesclarEsquemas(esquemas, esquemasAdicionais)
-    }
+    esquemasCli.mesclarEsquemas(esquemas, esquemasAdicionais)
 
-    var compreendido = analisador.analisar(conteudo)
-    var resultado = validador.validar(compreendido.propriedades, esquemas)
+    var compreendido: ResultadoCompreensao = analisador.analisar(leitura.conteudo)
+    var resultado: ResultadoValidacao = validador.validar(compreendido.propriedades, esquemas)
 
     // Erros de compreensão (por exemplo, chaves duplicadas) também são erros de validação.
     para (var i = 0; i < compreendido.erros.tamanho(); i = i + 1) {
-        var erro = compreendido.erros[i]
-        resultado.erros.adicionar(modelos.ErroValidacao("", erro.linha, erro.mensagem))
+        var erro: ErroCompreensao = compreendido.erros[i]
+        resultado.erros.adicionar(ErroValidacao("", erro.linha, erro.mensagem))
     }
 
     sistema.escreverSaida(formatadores.formatarValidacao(resultado) + "\n")
@@ -186,14 +182,14 @@ funcao comandoValidar(sistema, caminhoArquivo, caminhoEsquemas, esquemasAdiciona
     retorna 0
 }
 
-// Executa o comando pedido em `sistema.argumentos`.
-// `esquemasAdicionais` (opcional, ou nulo) complementa os esquemas embutidos.
+// Executa o comando pedido nos argumentos do sistema. `esquemasAdicionais` (espaço de
+// nomes → definições; pode ser vazio) complementa os esquemas embutidos.
 // Chama `sistema.encerrar(codigo)` ao final e devolve o código de saída.
-funcao executarCli(sistema, esquemasAdicionais) {
-    var opcoes = compreenderArgumentos(sistema.argumentos)
-    var codigo = 0
+funcao executarCli(sistema: SistemaCli, esquemasAdicionais: dicionário): inteiro {
+    var opcoes: OpcoesCli = compreenderArgumentos(sistema.obterArgumentos())
+    var codigo: inteiro = 0
 
-    se (opcoes.erro != nulo) {
+    se (opcoes.erro != "") {
         sistema.escreverErro(opcoes.erro + "\n")
         sistema.escreverSaida("\nExecute \"delprops --ajuda\" para obter ajuda.\n")
         codigo = 1

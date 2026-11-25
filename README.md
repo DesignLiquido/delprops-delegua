@@ -14,7 +14,9 @@ Pacote Pacoteca, escrito em Delégua, com a especificação, a análise e a vali
 pacote instalar delprops
 ```
 
-O pacote fica em `pacotes/node/delprops`. A realização suportada é `node` (`delegua-node`).
+O pacote fica em `pacotes/<realizacao>/delprops`. As realizações suportadas são `node` (`delegua-node`) e `llvm` (`delegua-llvm`): o mesmo código é interpretado ou compilado para um executável nativo.
+
+Para compilar com o `delegua-llvm`, o código tem tipos declarados em parâmetros, campos e variáveis lidas de vetores e dicionários, e evita valores `nulo` em textos e vetores (texto vazio e vetor vazio indicam ausência). Classes usadas em anotações de tipo são importadas com `importar { ... }`, porque `modulo.Classe` não é aceito como tipo.
 
 ## Uso como biblioteca
 
@@ -48,7 +50,7 @@ var meuProjeto = [modo]
 esquemas["meuProjeto"] = meuProjeto
 ```
 
-Os campos de `DefinicaoPropriedade` são `nome`, `tipoValor` (`"logico"`, `"texto"` ou `"numero"`), `detalhe`, `valorPadrao` (na sintaxe do `.delprops`, ou `nulo`) e `valoresPermitidos` (vetor de textos, ou `nulo`). Em Delégua, `tipo` e `padrao` são palavras reservadas e não podem ser nomes de campo; nos arquivos JSON de esquema, as chaves continuam sendo `tipo` e `padrao`, como no pacote original.
+Os campos de `DefinicaoPropriedade` são `nome`, `tipoValor` (`"logico"`, `"texto"` ou `"numero"`), `detalhe`, `valorPadrao` (na sintaxe do `.delprops`; texto vazio quando não há padrão) e `valoresPermitidos` (vetor de textos; vazio aceita qualquer valor). Em Delégua, `tipo` e `padrao` são palavras reservadas e não podem ser nomes de campo; nos arquivos JSON de esquema, as chaves continuam sendo `tipo` e `padrao`, como no pacote original.
 
 `esquemasDeTexto(conteudo)` lê esquemas de um texto JSON (comentários `//` e `/* */` são aceitos) no formato:
 
@@ -60,7 +62,9 @@ Os campos de `DefinicaoPropriedade` são `nome`, `tipoValor` (`"logico"`, `"text
 }
 ```
 
-e devolve `{ "esquemas": ..., "erro": "" }`. `mesclarEsquemas(base, adicionais)` acrescenta definições a um esquema existente.
+e devolve um `ResultadoEsquemas { esquemas, erro }` (`erro` vazio indica sucesso). `mesclarEsquemas(base, adicionais)` acrescenta definições a um esquema existente.
+
+O JSON é lido por um analisador próprio (`fontes/utilidades/json.delegua`), porque o módulo `json` tem interfaces diferentes nas realizações node e llvm. Os valores lidos são instâncias de `ValorJson`, com o tipo JSON em `tipoJson`; `definicaoDeJson(valor)` e `definicoesDeJson(valor)` convertem objetos JSON em definições.
 
 ## Esquemas contribuídos por pacotes
 
@@ -91,7 +95,7 @@ importar tudo como delprops de "delprops"
 
 var registro = delprops.criarRegistro()
 var diretorioPacotes = arquivos.juntarCaminhos(arquivos.diretorioAtual(), "pacotes")
-delprops.descobrir(diretorioPacotes, delprops.sistemaArquivosNode(), registro)
+delprops.descobrir(diretorioPacotes, delprops.sistemaArquivosLocal(), registro)
 
 var esquemas = delprops.obterEsquemasEmbutidos()
 delprops.mesclarEsquemas(esquemas, registro.obterEsquemas())
@@ -103,7 +107,7 @@ O registro também pode ser preenchido à mão: `registro.registrar(espacoNomes,
 
 O registro é um objeto, e não estado do módulo como no pacote original, porque na realização node cada `importar` cria uma instância nova do módulo importado.
 
-Qualquer objeto com os métodos `existe(caminho)`, `listarDiretorio(caminho)` (que devolve um vetor de `EntradaDiretorio { nome, ehDiretorio }`), `lerTexto(caminho)` e `juntarCaminhos(base, parte)` pode ser usado no lugar de `sistemaArquivosNode()`.
+`sistemaArquivosLocal()` usa a biblioteca `arquivos`, que existe nas duas realizações. Para usar outro sistema de arquivos (por exemplo, em memória nos testes), crie uma classe que herde de `SistemaArquivosDescoberta` (em `fontes/modelos.delegua`) e sobrescreva `existe(caminho)`, `listarDiretorio(caminho)` (que devolve um vetor de `EntradaDiretorio { nome, ehDiretorio }`), `lerTexto(caminho)` e `juntarCaminhos(base, parte)`. É uma classe base, e não uma interface, porque a realização node não importa interfaces de outro arquivo.
 
 Quando a mesma propriedade é definida mais de uma vez em um espaço de nomes (por exemplo, `tecnologia` em `liquido.dados`, nos esquemas embutidos e em um pacote), os valores permitidos das duas definições são somados. Se uma delas não restringir os valores, vale a mais recente.
 
@@ -114,6 +118,15 @@ bin/delprops <comando> [argumentos]          # Linux e macOS
 bin\delprops.cmd <comando> [argumentos]      # Windows
 delegua fontes/ilc.delegua -- <comando> [argumentos]
 ```
+
+Com o `delegua-llvm`, a linha de comando vira um executável nativo:
+
+```sh
+delegua-llvm fontes/ilc_llvm.delegua -o delprops
+./delprops <comando> [argumentos]
+```
+
+Os dois pontos de entrada só diferem na leitura dos argumentos, porque a biblioteca `argumentos` tem interfaces diferentes em cada realização; o resto está em `fontes/inicio_cli.delegua`.
 
 | Comando | Descrição |
 | --- | --- |
@@ -126,7 +139,7 @@ delegua fontes/ilc.delegua -- <comando> [argumentos]
 
 O código de saída é 1 quando há erros (avisos não contam). Se o diretório atual tiver `pacotes/`, os esquemas declarados pelos pacotes instalados entram na validação, no `info` e no `esquemas`. A variável `DELPROPS_DELEGUA` escolhe o interpretador usado pelos scripts de `bin/` (padrão: `delegua`).
 
-A lógica fica em `executarCli(sistema, esquemasAdicionais)`, que não depende da realização: toda leitura de arquivo e escrita no terminal passa pelo objeto `sistema` (veja o comentário no início de `fontes/cli.delegua`). `sistemaCliNode()` é a implementação para a realização node.
+A lógica fica em `executarCli(sistema, esquemasAdicionais)`, que não depende da realização: toda leitura de arquivo e escrita no terminal passa pelo objeto `sistema`, uma classe que herda de `SistemaCli` (em `fontes/modelos.delegua`). `sistemaCliLocal(argumentos)` é a implementação sobre as bibliotecas `arquivos` e `processo`. `esquemasAdicionais` é um dicionário, que pode ser vazio.
 
 ## O formato `.delprops`
 
@@ -252,7 +265,7 @@ liquido.estilos.diretorioBase = 'publico/css'
 | Arquivo | Conteúdo |
 | --- | --- |
 | `fontes/delprops.delegua` | Ponto de entrada do pacote |
-| `fontes/modelos.delegua` | Estruturas de dados (classes) e leitura de definições a partir de dicionários |
+| `fontes/modelos.delegua` | Estruturas de dados (classes), sistemas injetados e leitura de definições a partir de JSON |
 | `fontes/tipos.delegua` | Tipos de valor |
 | `fontes/analisador.delegua` | `analisar()` |
 | `fontes/validador.delegua` | `validar()`, `inferirTipo()`, `valorSemAspas()` |
@@ -261,8 +274,9 @@ liquido.estilos.diretorioBase = 'publico/css'
 | `fontes/esquemas.delegua` | Esquemas embutidos, leitura de JSON e mescla |
 | `fontes/formatadores.delegua` | Formatação da saída da linha de comando |
 | `fontes/cli.delegua` | `executarCli()` |
-| `fontes/ilc.delegua` | Programa da linha de comando (realização node) |
-| `fontes/sistema_arquivos_node.delegua`, `fontes/sistema_cli_node.delegua` | Implementações node dos sistemas injetados |
+| `fontes/ilc.delegua`, `fontes/ilc_llvm.delegua` | Programa da linha de comando (realizações node e llvm) |
+| `fontes/inicio_cli.delegua` | Parte comum dos dois programas: descoberta de pacotes e execução |
+| `fontes/sistema_arquivos.delegua`, `fontes/sistema_cli.delegua` | Sistemas injetados sobre as bibliotecas `arquivos` e `processo` |
 | `fontes/liquido.delegua`, `fontes/liquido/` | Esquemas do Líquido |
 | `fontes/utilidades/` | JSON/JSONC e utilidades de texto |
 

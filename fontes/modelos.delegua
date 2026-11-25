@@ -2,32 +2,39 @@
 //
 // São classes, e não dicionários, porque o interpretador desembrulha um dicionário com a
 // chave "valor" quando ele é devolvido por uma função, e as propriedades têm essa chave.
+// Os tipos são declarados para que o código também compile com o delegua-llvm.
 importar tudo como tipos de "./tipos.delegua"
+importar { ValorJson } de "./utilidades/json.delegua"
 
-// Definição de uma propriedade em um esquema. `valorPadrao` (na sintaxe do .delprops) e
-// `valoresPermitidos` são opcionais: use `nulo` quando ausentes.
+// Definição de uma propriedade em um esquema. `valorPadrao` (na sintaxe do .delprops) vazio
+// indica que não há padrão; `valoresPermitidos` vazio aceita qualquer valor.
 classe DefinicaoPropriedade {
     nome: texto
     tipoValor: texto
     detalhe: texto
     valorPadrao: texto
-    valoresPermitidos: vetor
+    valoresPermitidos: texto[]
 
-    construtor(nome, tipoValor, detalhe, valorPadrao, valoresPermitidos) {
+    construtor(nome: texto, tipoValor: texto, detalhe: texto, valorPadrao: texto, valoresPermitidos: texto[]) {
         isto.nome = nome
         isto.tipoValor = tipoValor
         isto.detalhe = detalhe
         isto.valorPadrao = valorPadrao
         isto.valoresPermitidos = valoresPermitidos
     }
+
+    // Verdadeiro se a definição restringe os valores aceitos.
+    temValoresPermitidos(): lógico {
+        retorna isto.valoresPermitidos.tamanho() > 0
+    }
 }
 
 // Esquema contribuído por um pacote para um espaço de nomes.
 classe ContribuicaoEsquema {
     pacote: texto
-    definicoes: vetor
+    definicoes: DefinicaoPropriedade[]
 
-    construtor(pacote, definicoes) {
+    construtor(pacote: texto, definicoes: DefinicaoPropriedade[]) {
         isto.pacote = pacote
         isto.definicoes = definicoes
     }
@@ -37,9 +44,9 @@ classe ContribuicaoEsquema {
 classe PropriedadeCompreendida {
     chave: texto
     valor: texto
-    linha: número
+    linha: inteiro
 
-    construtor(chave, valor, linha) {
+    construtor(chave: texto, valor: texto, linha: inteiro) {
         isto.chave = chave
         isto.valor = valor
         isto.linha = linha
@@ -49,19 +56,19 @@ classe PropriedadeCompreendida {
 // Erro de sintaxe encontrado durante a compreensão.
 classe ErroCompreensao {
     mensagem: texto
-    linha: número
+    linha: inteiro
 
-    construtor(mensagem, linha) {
+    construtor(mensagem: texto, linha: inteiro) {
         isto.mensagem = mensagem
         isto.linha = linha
     }
 }
 
 classe ResultadoCompreensao {
-    propriedades: vetor
-    erros: vetor
+    propriedades: PropriedadeCompreendida[]
+    erros: ErroCompreensao[]
 
-    construtor(propriedades, erros) {
+    construtor(propriedades: PropriedadeCompreendida[], erros: ErroCompreensao[]) {
         isto.propriedades = propriedades
         isto.erros = erros
     }
@@ -70,10 +77,10 @@ classe ResultadoCompreensao {
 // Aviso de validação (propriedade desconhecida).
 classe AvisoValidacao {
     chave: texto
-    linha: número
+    linha: inteiro
     mensagem: texto
 
-    construtor(chave, linha, mensagem) {
+    construtor(chave: texto, linha: inteiro, mensagem: texto) {
         isto.chave = chave
         isto.linha = linha
         isto.mensagem = mensagem
@@ -83,10 +90,10 @@ classe AvisoValidacao {
 // Erro de validação (tipo ou valor inválido).
 classe ErroValidacao {
     chave: texto
-    linha: número
+    linha: inteiro
     mensagem: texto
 
-    construtor(chave, linha, mensagem) {
+    construtor(chave: texto, linha: inteiro, mensagem: texto) {
         isto.chave = chave
         isto.linha = linha
         isto.mensagem = mensagem
@@ -94,10 +101,10 @@ classe ErroValidacao {
 }
 
 classe ResultadoValidacao {
-    avisos: vetor
-    erros: vetor
+    avisos: AvisoValidacao[]
+    erros: ErroValidacao[]
 
-    construtor(avisos, erros) {
+    construtor(avisos: AvisoValidacao[], erros: ErroValidacao[]) {
         isto.avisos = avisos
         isto.erros = erros
     }
@@ -108,13 +115,13 @@ classe EntradaDiretorio {
     nome: texto
     ehDiretorio: lógico
 
-    construtor(nome, ehDiretorio) {
+    construtor(nome: texto, ehDiretorio: lógico) {
         isto.nome = nome
         isto.ehDiretorio = ehDiretorio
     }
 }
 
-// Opções da linha de comando. Campos ausentes ficam `nulo`.
+// Opções da linha de comando. Campos ausentes ficam vazios.
 classe OpcoesCli {
     comando: texto
     caminhoArquivo: texto
@@ -122,61 +129,96 @@ classe OpcoesCli {
     nomePropriedade: texto
     erro: texto
 
-    construtor(comando) {
+    construtor(comando: texto) {
         isto.comando = comando
-        isto.caminhoArquivo = nulo
-        isto.caminhoEsquemas = nulo
-        isto.nomePropriedade = nulo
-        isto.erro = nulo
+        isto.caminhoArquivo = ""
+        isto.caminhoEsquemas = ""
+        isto.nomePropriedade = ""
+        isto.erro = ""
     }
 }
 
-funcao ehTexto(valor) {
-    retorna valor != nulo e tipo de valor == "texto"
+// Item da listagem de `info`: uma definição e o espaço de nomes onde ela aparece.
+classe ItemInfo {
+    espacoNomes: texto
+    definicao: DefinicaoPropriedade
+
+    construtor(espacoNomes: texto, definicao: DefinicaoPropriedade) {
+        isto.espacoNomes = espacoNomes
+        isto.definicao = definicao
+    }
 }
 
-funcao ehVetor(valor) {
-    se (valor == nulo) { retorna falso }
-    var tipoValor = "" + (tipo de valor)
-    retorna tipoValor == "vetor" ou tipoValor.terminaCom("[]")
+// Sistema de arquivos usado pela descoberta de esquemas de pacotes. As implementações
+// herdam desta classe e sobrescrevem todos os métodos. É uma classe, e não uma interface,
+// porque interfaces não podem ser importadas de outro arquivo na realização node.
+classe SistemaArquivosDescoberta {
+    existe(caminho: texto): lógico { retorna falso }
+
+    listarDiretorio(caminho: texto): EntradaDiretorio[] {
+        var entradas: EntradaDiretorio[] = []
+        retorna entradas
+    }
+
+    lerTexto(caminho: texto): texto { retorna "" }
+
+    juntarCaminhos(base: texto, parte: texto): texto { retorna base + "/" + parte }
 }
 
-funcao ehDicionario(valor) {
-    se (valor == nulo) { retorna falso }
-    var tipoValor = tipo de valor
-    retorna tipoValor == "dicionário" ou tipoValor == "dicionario"
+// Sistema usado pela linha de comando: argumentos (sem o interpretador e o programa),
+// arquivos e saída. `resolverCaminho(base, caminho)` devolve o caminho absoluto. As
+// implementações herdam desta classe e sobrescrevem todos os métodos.
+classe SistemaCli {
+    obterArgumentos(): texto[] {
+        var argumentos: texto[] = []
+        retorna argumentos
+    }
+
+    lerArquivo(caminho: texto): texto { retorna "" }
+
+    diretorioAtual(): texto { retorna "" }
+
+    juntarCaminhos(base: texto, parte: texto): texto { retorna base + "/" + parte }
+
+    resolverCaminho(base: texto, caminho: texto): texto { retorna base + "/" + caminho }
+
+    escreverSaida(conteudo: texto) {}
+
+    escreverErro(conteudo: texto) {}
+
+    encerrar(codigo: inteiro) {}
+
+    existe(caminho: texto): lógico { retorna falso }
 }
 
-// Cria uma DefinicaoPropriedade a partir de um dicionário (por exemplo, lido de JSON).
-// Devolve `nulo` se faltar `nome`, `tipo` ou `detalhe`, ou se o tipo for desconhecido.
-funcao definicaoDeDicionario(dados) {
-    se (nao ehDicionario(dados)) { retorna nulo }
-    var nome = dados["nome"]
-    var tipoValor = dados["tipo"]
-    var detalhe = dados["detalhe"]
-    se (nao ehTexto(nome) ou nao ehTexto(tipoValor) ou nao ehTexto(detalhe)) { retorna nulo }
+// Cria uma DefinicaoPropriedade a partir de um objeto JSON. Devolve `nulo` se faltar
+// `nome`, `tipo` ou `detalhe`, ou se o tipo for desconhecido.
+funcao definicaoDeJson(dados: ValorJson): DefinicaoPropriedade {
+    se (nao dados.ehObjeto()) { retorna nulo }
+    var nome: texto = dados.textoDoCampo("nome")
+    var tipoValor: texto = dados.textoDoCampo("tipo")
+    var detalhe: texto = dados.textoDoCampo("detalhe")
+    se (nome == "" ou tipoValor == "" ou detalhe == "") { retorna nulo }
     se (nao tipos.ehTipoValor(tipoValor)) { retorna nulo }
-    var valorPadrao = nulo
-    se (ehTexto(dados["padrao"])) { valorPadrao = dados["padrao"] }
-    var permitidos = nulo
-    var permitidosLidos = dados["valoresPermitidos"]
-    se (ehVetor(permitidosLidos)) {
-        permitidos = []
-        para (var i = 0; i < permitidosLidos.tamanho(); i = i + 1) {
-            var item = permitidosLidos[i]
-            se (ehTexto(item)) { permitidos.adicionar(item) }
-        }
+    var valorPadrao: texto = ""
+    var padraoLido: ValorJson = dados.campo("padrao")
+    se (padraoLido.ehTexto()) { valorPadrao = padraoLido.textoValor }
+    var permitidos: texto[] = []
+    var permitidosLidos: ValorJson = dados.campo("valoresPermitidos")
+    para (var i = 0; i < permitidosLidos.itens.tamanho(); i = i + 1) {
+        var item: ValorJson = permitidosLidos.itens[i]
+        se (item.ehTexto()) { permitidos.adicionar(item.textoValor) }
     }
     retorna DefinicaoPropriedade(nome, tipoValor, detalhe, valorPadrao, permitidos)
 }
 
-// Cria um vetor de DefinicaoPropriedade a partir de um vetor de dicionários,
-// ignorando itens inválidos.
-funcao definicoesDeVetor(dados) {
-    var definicoes = []
-    se (nao ehVetor(dados)) { retorna definicoes }
-    para (var i = 0; i < dados.tamanho(); i = i + 1) {
-        var definicao = definicaoDeDicionario(dados[i])
+// Cria um vetor de DefinicaoPropriedade a partir de um vetor JSON de objetos, ignorando
+// itens inválidos.
+funcao definicoesDeJson(dados: ValorJson): DefinicaoPropriedade[] {
+    var definicoes: DefinicaoPropriedade[] = []
+    para (var i = 0; i < dados.itens.tamanho(); i = i + 1) {
+        var item: ValorJson = dados.itens[i]
+        var definicao: DefinicaoPropriedade = definicaoDeJson(item)
         se (definicao != nulo) { definicoes.adicionar(definicao) }
     }
     retorna definicoes

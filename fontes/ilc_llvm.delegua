@@ -1,0 +1,16 @@
+// Ponto de entrada da linha de comando `delprops` na realização llvm.
+//
+// Compilação:
+//     delegua-llvm fontes/ilc_llvm.delegua -o delprops
+//
+// Se o diretório atual tiver `pacotes/` (instalados pela Pacoteca), os esquemas que os
+// pacotes declaram em `pacoteca.jsonc` são descobertos e somados aos embutidos.
+// Na realização node, o ponto de entrada é fontes/ilc.delegua.
+importar tudo como argumentosProcesso de "argumentos"
+importar tudo como inicio de "./inicio_cli.delegua"
+
+var argumentosCli: texto[] = []
+var quantidade: inteiro = argumentosProcesso.quantidadeArgumentos()
+para (var i = 0; i < quantidade; i = i + 1) { argumentosCli.adicionar(argumentosProcesso.argumento(i)) }
+
+inicio.executarComPacotes(argumentosCli)

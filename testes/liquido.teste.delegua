@@ -19,7 +19,7 @@ funcao verificar(definicoes, nome, tipoValor, valorPadrao) {
     var definicao = auxiliares.porNome(definicoes, nome)
     afirmar.diferente(nulo, definicao)
     afirmar.igual(tipoValor, definicao.tipoValor)
-    se (valorPadrao != nulo) { afirmar.igual(valorPadrao, definicao.valorPadrao) }
+    afirmar.igual(valorPadrao, definicao.valorPadrao)
 }
 
 grupo("Esquemas do Líquido", funcao() {
@@ -39,7 +39,7 @@ grupo("Esquemas do Líquido", funcao() {
         var definicoes = liquido.arquetipo()
         verificarDefinicoes(definicoes)
         afirmar.igual(1, definicoes.tamanho())
-        verificar(definicoes, "arquetipo", "texto", nulo)
+        verificar(definicoes, "arquetipo", "texto", "")
         afirmar.igual("rest,mvc", definicoes[0].valoresPermitidos.juntar(","))
     })
 
@@ -55,7 +55,7 @@ grupo("Esquemas do Líquido", funcao() {
         verificarDefinicoes(definicoes)
         afirmar.igual(5, definicoes.tamanho())
         para cada nome em ["nome", "versao", "descricao", "licenca.nome", "licenca.url"] {
-            verificar(definicoes, nome, "texto", nulo)
+            verificar(definicoes, nome, "texto", "")
         }
     })
 
@@ -80,10 +80,10 @@ grupo("Esquemas do Líquido", funcao() {
         afirmar.igual(9, definicoes.tamanho())
         afirmar.igual("sqlite,mysql,postgres,mongodb,mssql", auxiliares.porNome(definicoes, "tecnologia").valoresPermitidos.juntar(","))
         para cada nome em ["caminho", "host", "usuario", "senha", "banco", "arquivoInicializacao"] {
-            verificar(definicoes, nome, "texto", nulo)
+            verificar(definicoes, nome, "texto", "")
         }
-        verificar(definicoes, "porta", "numero", nulo)
-        verificar(definicoes, "autoInicializar", "logico", nulo)
+        verificar(definicoes, "porta", "numero", "")
+        verificar(definicoes, "autoInicializar", "logico", "")
     })
 
     teste("autenticacao", funcao() {

@@ -1,8 +1,9 @@
 // Propriedades de liquido.estilos.*.
-importar tudo como modelos de "../modelos.delegua"
+importar { DefinicaoPropriedade } de "../modelos.delegua"
 
-funcao definicoes() {
-    retorna [
-        modelos.DefinicaoPropriedade("diretorioBase", "texto", "Caminho do diretório onde o CSS gerado a partir de FolEs é salvo e servido.", "'publico/css'", nulo)
+funcao definicoes(): DefinicaoPropriedade[] {
+    var lista: DefinicaoPropriedade[] = [
+        DefinicaoPropriedade("diretorioBase", "texto", "Caminho do diretório onde o CSS gerado a partir de FolEs é salvo e servido.", "'publico/css'", [])
     ]
+    retorna lista
 }

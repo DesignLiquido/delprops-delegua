@@ -1,17 +1,18 @@
 // Propriedades de uma fonte de dados nomeada (liquido.dados.<nome>.*).
 // O nome da fonte é dinâmico e definido pelo projeto.
-importar tudo como modelos de "../modelos.delegua"
+importar { DefinicaoPropriedade } de "../modelos.delegua"
 
-funcao definicoes() {
-    retorna [
-        modelos.DefinicaoPropriedade("tecnologia", "texto", "Tecnologia de banco de dados.", nulo, ["sqlite", "mysql", "postgres", "mongodb", "mssql"]),
-        modelos.DefinicaoPropriedade("caminho", "texto", "Caminho do arquivo de banco de dados (ex: ':memory:' para SQLite em memória).", nulo, nulo),
-        modelos.DefinicaoPropriedade("host", "texto", "Endereço do servidor de banco de dados.", nulo, nulo),
-        modelos.DefinicaoPropriedade("porta", "numero", "Porta do servidor de banco de dados.", nulo, nulo),
-        modelos.DefinicaoPropriedade("usuario", "texto", "Nome de usuário para conexão.", nulo, nulo),
-        modelos.DefinicaoPropriedade("senha", "texto", "Senha para conexão.", nulo, nulo),
-        modelos.DefinicaoPropriedade("banco", "texto", "Nome do banco de dados.", nulo, nulo),
-        modelos.DefinicaoPropriedade("autoInicializar", "logico", "Inicializa o banco automaticamente ao iniciar o servidor.", nulo, nulo),
-        modelos.DefinicaoPropriedade("arquivoInicializacao", "texto", "Arquivo de inicialização do banco (padrão: 'inicializacao.lincones').", nulo, nulo)
+funcao definicoes(): DefinicaoPropriedade[] {
+    var lista: DefinicaoPropriedade[] = [
+        DefinicaoPropriedade("tecnologia", "texto", "Tecnologia de banco de dados.", "", ["sqlite", "mysql", "postgres", "mongodb", "mssql"]),
+        DefinicaoPropriedade("caminho", "texto", "Caminho do arquivo de banco de dados (ex: ':memory:' para SQLite em memória).", "", []),
+        DefinicaoPropriedade("host", "texto", "Endereço do servidor de banco de dados.", "", []),
+        DefinicaoPropriedade("porta", "numero", "Porta do servidor de banco de dados.", "", []),
+        DefinicaoPropriedade("usuario", "texto", "Nome de usuário para conexão.", "", []),
+        DefinicaoPropriedade("senha", "texto", "Senha para conexão.", "", []),
+        DefinicaoPropriedade("banco", "texto", "Nome do banco de dados.", "", []),
+        DefinicaoPropriedade("autoInicializar", "logico", "Inicializa o banco automaticamente ao iniciar o servidor.", "", []),
+        DefinicaoPropriedade("arquivoInicializacao", "texto", "Arquivo de inicialização do banco (padrão: 'inicializacao.lincones').", "", [])
     ]
+    retorna lista
 }

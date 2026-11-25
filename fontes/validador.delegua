@@ -1,13 +1,19 @@
 // Validação de propriedades compreendidas contra esquemas conhecidos.
-importar tudo como modelos de "./modelos.delegua"
 importar tudo como textos de "./utilidades/texto.delegua"
+importar {
+    AvisoValidacao,
+    DefinicaoPropriedade,
+    ErroValidacao,
+    PropriedadeCompreendida,
+    ResultadoValidacao
+} de "./modelos.delegua"
 
 // Espaço de nomes com sub-espaço dinâmico: liquido.dados.<nome>.<propriedade>.
-funcao espacoNomesDados() {
+funcao espacoNomesDados(): texto {
     retorna "liquido.dados"
 }
 
-funcao ehTextoEntreAspas(valor) {
+funcao ehTextoEntreAspas(valor: texto): lógico {
     retorna valor.tamanho() >= 2 e textos.comecaCom(valor, "'") e textos.terminaCom(valor, "'")
 }
 
@@ -15,16 +21,16 @@ funcao ehTextoEntreAspas(valor) {
 // - `verdadeiro` / `falso` → "logico"
 // - valor entre aspas simples → "texto"
 // - números inteiros e decimais → "numero"
-// - caso contrário → nulo
-funcao inferirTipo(valor) {
+// - caso contrário → "" (tipo desconhecido)
+funcao inferirTipo(valor: texto): texto {
     se (valor == "verdadeiro" ou valor == "falso") { retorna "logico" }
     se (ehTextoEntreAspas(valor)) { retorna "texto" }
     se (textos.ehNumeroDecimal(valor)) { retorna "numero" }
-    retorna nulo
+    retorna ""
 }
 
 // Remove as aspas simples do valor, se houver.
-funcao valorSemAspas(valor) {
+funcao valorSemAspas(valor: texto): texto {
     se (ehTextoEntreAspas(valor)) { retorna valor.subtexto(1, valor.tamanho() - 1) }
     retorna valor
 }
@@ -32,37 +38,37 @@ funcao valorSemAspas(valor) {
 // Une duas definições de mesmo nome (por exemplo, a embutida e a de um pacote que estende o
 // espaço de nomes). Se ambas restringem os valores, os permitidos são somados; senão, vale
 // a definição mais recente.
-funcao unirDefinicoes(anterior, nova) {
-    se (anterior.valoresPermitidos == nulo ou nova.valoresPermitidos == nulo) { retorna nova }
+funcao unirDefinicoes(anterior: DefinicaoPropriedade, nova: DefinicaoPropriedade): DefinicaoPropriedade {
+    se (nao anterior.temValoresPermitidos() ou nao nova.temValoresPermitidos()) { retorna nova }
     se (anterior.tipoValor != nova.tipoValor) { retorna nova }
-    var permitidos = []
+    var permitidos: texto[] = []
     para (var i = 0; i < anterior.valoresPermitidos.tamanho(); i = i + 1) {
         permitidos.adicionar(anterior.valoresPermitidos[i])
     }
     para (var j = 0; j < nova.valoresPermitidos.tamanho(); j = j + 1) {
-        var permitido = nova.valoresPermitidos[j]
+        var permitido: texto = nova.valoresPermitidos[j]
         se (nao permitidos.inclui(permitido)) { permitidos.adicionar(permitido) }
     }
-    var valorPadrao = nova.valorPadrao
-    se (valorPadrao == nulo) { valorPadrao = anterior.valorPadrao }
-    retorna modelos.DefinicaoPropriedade(nova.nome, nova.tipoValor, nova.detalhe, valorPadrao, permitidos)
+    var valorPadrao: texto = nova.valorPadrao
+    se (valorPadrao == "") { valorPadrao = anterior.valorPadrao }
+    retorna DefinicaoPropriedade(nova.nome, nova.tipoValor, nova.detalhe, valorPadrao, permitidos)
 }
 
 // Espaço de nomes → (nome da propriedade → definição).
-funcao construirMapasConsulta(esquemas) {
-    var mapas = {}
-    var espacos = esquemas.chaves()
+funcao construirMapasConsulta(esquemas: dicionário): dicionário {
+    var mapas: dicionário = {}
+    var espacos: texto[] = esquemas.chaves()
     para (var i = 0; i < espacos.tamanho(); i = i + 1) {
-        var espaco = espacos[i]
-        var definicoes = esquemas[espaco]
-        var mapa = {}
+        var espaco: texto = espacos[i]
+        var definicoes: DefinicaoPropriedade[] = esquemas[espaco]
+        var mapa: dicionário = {}
         para (var j = 0; j < definicoes.tamanho(); j = j + 1) {
-            var definicao = definicoes[j]
+            var definicao: DefinicaoPropriedade = definicoes[j]
             se (mapa.contem(definicao.nome)) {
                 // Copiar por uma variável local: guardar o retorno direto no dicionário
                 // deixa uma referência inválida no interpretador.
-                var anterior = mapa[definicao.nome]
-                var unida = unirDefinicoes(anterior, definicao)
+                var anterior: DefinicaoPropriedade = mapa[definicao.nome]
+                var unida: DefinicaoPropriedade = unirDefinicoes(anterior, definicao)
                 mapa[definicao.nome] = unida
             } senao {
                 mapa[definicao.nome] = definicao
@@ -74,32 +80,53 @@ funcao construirMapasConsulta(esquemas) {
 }
 
 // Último segmento de um caminho com pontos: `liquido.arquetipo` → `arquetipo`.
-funcao ultimoSegmento(caminho) {
-    var partes = caminho.dividir(".")
+funcao ultimoSegmento(caminho: texto): texto {
+    var partes: texto[] = caminho.dividir(".")
     retorna partes[partes.tamanho() - 1]
 }
 
 // Extrai o nome da propriedade a partir da chave completa. Em `liquido.dados`, descarta o
 // sub-espaço dinâmico: `liquido.dados.lincones.tecnologia` → `tecnologia`.
 // Se a chave é o próprio espaço de nomes, devolve "" (o chamador decide).
-funcao extrairNomePropriedade(espacoNomes, chave) {
+funcao extrairNomePropriedade(espacoNomes: texto, chave: texto): texto {
     se (chave == espacoNomes) { retorna "" }
-    var restante = chave.subtexto(espacoNomes.tamanho() + 1, chave.tamanho())
+    var restante: texto = chave.subtexto(espacoNomes.tamanho() + 1, chave.tamanho())
     se (espacoNomes == espacoNomesDados()) {
-        var indicePonto = restante.encontrar(".")
+        var indicePonto: inteiro = restante.encontrar(".")
         se (indicePonto < 0) { retorna "" }
         retorna restante.subtexto(indicePonto + 1, restante.tamanho())
     }
     retorna restante
 }
 
-// Espaço de nomes mais específico que contém a chave, ou nulo.
-funcao encontrarEspacoNomes(nomesOrdenados, chave) {
+// Espaço de nomes mais específico que contém a chave, ou "".
+funcao encontrarEspacoNomes(nomesOrdenados: texto[], chave: texto): texto {
     para (var i = 0; i < nomesOrdenados.tamanho(); i = i + 1) {
-        var espaco = nomesOrdenados[i]
+        var espaco: texto = nomesOrdenados[i]
         se (chave == espaco ou textos.comecaCom(chave, espaco + ".")) { retorna espaco }
     }
-    retorna nulo
+    retorna ""
+}
+
+// Nomes dos espaços de nomes, do mais longo ao mais curto: 'liquido.aplicacao' antes de
+// 'liquido'. Entre nomes de mesmo tamanho, mantém a ordem original.
+funcao ordenarPorTamanhoDecrescente(nomes: texto[]): texto[] {
+    // Ordenação por inserção, no próprio vetor: cada nome novo recua enquanto o anterior
+    // for mais curto.
+    var ordenados: texto[] = []
+    para (var i = 0; i < nomes.tamanho(); i = i + 1) {
+        var nome: texto = nomes[i]
+        ordenados.adicionar(nome)
+        var j: inteiro = ordenados.tamanho() - 1
+        enquanto (j > 0) {
+            var anterior: texto = ordenados[j - 1]
+            se (anterior.tamanho() >= nome.tamanho()) { sustar }
+            ordenados[j] = anterior
+            ordenados[j - 1] = nome
+            j = j - 1
+        }
+    }
+    retorna ordenados
 }
 
 // Valida propriedades compreendidas contra os esquemas (dicionário: espaço de nomes →
@@ -108,22 +135,19 @@ funcao encontrarEspacoNomes(nomesOrdenados, chave) {
 // - tipo de valor incompatível gera erro;
 // - valor fora dos permitidos gera erro.
 // Chaves de espaços de nomes desconhecidos não são validadas.
-// Devolve um ResultadoValidacao.
-funcao validar(propriedades, esquemas) {
-    var avisos = []
-    var erros = []
-    var mapasConsulta = construirMapasConsulta(esquemas)
-
-    // Do mais específico ao menos específico: 'liquido.aplicacao' antes de 'liquido'.
-    var nomesEspacos = esquemas.chaves().ordenar(funcao(a, b) { retorna b.tamanho() - a.tamanho() })
+funcao validar(propriedades: PropriedadeCompreendida[], esquemas: dicionário): ResultadoValidacao {
+    var avisos: AvisoValidacao[] = []
+    var erros: ErroValidacao[] = []
+    var mapasConsulta: dicionário = construirMapasConsulta(esquemas)
+    var nomesEspacos: texto[] = ordenarPorTamanhoDecrescente(esquemas.chaves())
 
     para (var i = 0; i < propriedades.tamanho(); i = i + 1) {
-        var propriedade = propriedades[i]
-        var espaco = encontrarEspacoNomes(nomesEspacos, propriedade.chave)
-        se (espaco == nulo) { continua }
+        var propriedade: PropriedadeCompreendida = propriedades[i]
+        var espaco: texto = encontrarEspacoNomes(nomesEspacos, propriedade.chave)
+        se (espaco == "") { continua }
 
-        var mapa = mapasConsulta[espaco]
-        var nomePropriedade = extrairNomePropriedade(espaco, propriedade.chave)
+        var mapa: dicionário = mapasConsulta[espaco]
+        var nomePropriedade: texto = extrairNomePropriedade(espaco, propriedade.chave)
 
         // Propriedade com o mesmo nome do espaço de nomes: `liquido.arquetipo = 'mvc'`
         // valida contra a propriedade `arquetipo` de `liquido.arquetipo`.
@@ -132,7 +156,7 @@ funcao validar(propriedades, esquemas) {
         }
 
         se (nomePropriedade == "") {
-            avisos.adicionar(modelos.AvisoValidacao(
+            avisos.adicionar(AvisoValidacao(
                 propriedade.chave,
                 propriedade.linha,
                 "Espaço de nomes '" + espaco + "' sem nome de propriedade."
@@ -141,18 +165,18 @@ funcao validar(propriedades, esquemas) {
         }
 
         se (nao mapa.contem(nomePropriedade)) {
-            avisos.adicionar(modelos.AvisoValidacao(
+            avisos.adicionar(AvisoValidacao(
                 propriedade.chave,
                 propriedade.linha,
                 "Propriedade '" + nomePropriedade + "' desconhecida no espaço de nomes '" + espaco + "'."
             ))
             continua
         }
-        var definicao = mapa[nomePropriedade]
+        var definicao: DefinicaoPropriedade = mapa[nomePropriedade]
 
-        var tipoInferido = inferirTipo(propriedade.valor)
-        se (tipoInferido == nulo) {
-            erros.adicionar(modelos.ErroValidacao(
+        var tipoInferido: texto = inferirTipo(propriedade.valor)
+        se (tipoInferido == "") {
+            erros.adicionar(ErroValidacao(
                 propriedade.chave,
                 propriedade.linha,
                 "Valor '" + propriedade.valor + "' não corresponde a nenhum tipo conhecido (logico, texto, numero)."
@@ -161,7 +185,7 @@ funcao validar(propriedades, esquemas) {
         }
 
         se (tipoInferido != definicao.tipoValor) {
-            erros.adicionar(modelos.ErroValidacao(
+            erros.adicionar(ErroValidacao(
                 propriedade.chave,
                 propriedade.linha,
                 "Tipo esperado '" + definicao.tipoValor + "', mas o valor '" + propriedade.valor + "' parece ser '" + tipoInferido + "'."
@@ -169,18 +193,17 @@ funcao validar(propriedades, esquemas) {
             continua
         }
 
-        var permitidos = definicao.valoresPermitidos
-        se (permitidos != nulo e permitidos.tamanho() > 0) {
-            var valorLimpo = valorSemAspas(propriedade.valor)
-            se (nao permitidos.inclui(valorLimpo)) {
-                erros.adicionar(modelos.ErroValidacao(
+        se (definicao.temValoresPermitidos()) {
+            var valorLimpo: texto = valorSemAspas(propriedade.valor)
+            se (nao definicao.valoresPermitidos.inclui(valorLimpo)) {
+                erros.adicionar(ErroValidacao(
                     propriedade.chave,
                     propriedade.linha,
-                    "Valor '" + valorLimpo + "' não está entre os permitidos: [" + permitidos.juntar(", ") + "]."
+                    "Valor '" + valorLimpo + "' não está entre os permitidos: [" + definicao.valoresPermitidos.juntar(", ") + "]."
                 ))
             }
         }
     }
 
-    retorna modelos.ResultadoValidacao(avisos, erros)
+    retorna ResultadoValidacao(avisos, erros)
 }

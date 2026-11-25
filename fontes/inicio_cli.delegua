@@ -1,0 +1,18 @@
+// Parte comum dos pontos de entrada da linha de comando (fontes/ilc.delegua e
+// fontes/ilc_llvm.delegua): descobre os esquemas dos pacotes em `./pacotes` e executa.
+importar tudo como arquivos de "arquivos"
+importar tudo como cli de "./cli.delegua"
+importar tudo como descobridor de "./descobridor.delegua"
+importar tudo como registro de "./registro.delegua"
+importar tudo como sistemaArquivos de "./sistema_arquivos.delegua"
+importar tudo como sistemaCli de "./sistema_cli.delegua"
+importar { RegistroEsquemas } de "./registro.delegua"
+
+// Executa a linha de comando com os argumentos dados, somando aos esquemas embutidos os
+// que os pacotes de `./pacotes` declaram. Devolve o código de saída.
+funcao executarComPacotes(argumentos: texto[]): inteiro {
+    var diretorioPacotes: texto = arquivos.juntarCaminhos(arquivos.diretorioAtual(), "pacotes")
+    var registroPacotes: RegistroEsquemas = registro.criarRegistro()
+    descobridor.descobrir(diretorioPacotes, sistemaArquivos.sistemaArquivosLocal(), registroPacotes)
+    retorna cli.executarCli(sistemaCli.sistemaCliLocal(argumentos), registroPacotes.obterEsquemas())
+}

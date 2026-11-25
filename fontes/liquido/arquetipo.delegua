@@ -1,8 +1,9 @@
 // Propriedades de liquido.arquetipo.
-importar tudo como modelos de "../modelos.delegua"
+importar { DefinicaoPropriedade } de "../modelos.delegua"
 
-funcao definicoes() {
-    retorna [
-        modelos.DefinicaoPropriedade("arquetipo", "texto", "Arquétipo do projeto Líquido.", nulo, ["rest", "mvc"])
+funcao definicoes(): DefinicaoPropriedade[] {
+    var lista: DefinicaoPropriedade[] = [
+        DefinicaoPropriedade("arquetipo", "texto", "Arquétipo do projeto Líquido.", "", ["rest", "mvc"])
     ]
+    retorna lista
 }

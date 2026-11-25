@@ -2,7 +2,7 @@
   "nome": "delprops",
   "descricao": "Especificação, análise e validação do formato de arquivo .delprops do ecossistema Delégua, escrito em Delégua.",
   "versao": "0.1.0",
-  "realizacoes": ["node"],
+  "realizacoes": ["node", "llvm"],
   "pontoDeEntrada": "fontes/delprops.delegua",
   "simbolos": [
     {
@@ -17,7 +17,7 @@
       "nome": "validar",
       "tipoRetorno": "ResultadoValidacao",
       "argumentos": [
-        { "nome": "propriedades", "tipo": "vetor" },
+        { "nome": "propriedades", "tipo": "PropriedadeCompreendida[]" },
         { "nome": "esquemas", "tipo": "dicionário" }
       ],
       "documentacao": "Valida propriedades compreendidas contra esquemas (espaço de nomes → definições). Devolve { avisos, erros }."
@@ -49,10 +49,10 @@
     {
       "tipo": "funcao",
       "nome": "descobrir",
-      "tipoRetorno": "número",
+      "tipoRetorno": "inteiro",
       "argumentos": [
         { "nome": "diretorioPacotes", "tipo": "texto" },
-        { "nome": "sistema", "tipo": "SistemaArquivosNode" },
+        { "nome": "sistema", "tipo": "SistemaArquivosDescoberta" },
         { "nome": "registro", "tipo": "RegistroEsquemas" }
       ],
       "documentacao": "Registra os esquemas que os pacotes instalados pela Pacoteca declaram em pacoteca.jsonc."
@@ -60,12 +60,12 @@
     {
       "tipo": "funcao",
       "nome": "executarCli",
-      "tipoRetorno": "número",
+      "tipoRetorno": "inteiro",
       "argumentos": [
-        { "nome": "sistema", "tipo": "SistemaCliNode" },
+        { "nome": "sistema", "tipo": "SistemaCli" },
         { "nome": "esquemasAdicionais", "tipo": "dicionário" }
       ],
-      "documentacao": "Executa a linha de comando delprops com o sistema dado e devolve o código de saída."
+      "documentacao": "Executa a linha de comando delprops com o sistema dado (esquemasAdicionais pode ser vazio) e devolve o código de saída."
     }
   ]
 }

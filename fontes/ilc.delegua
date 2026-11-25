@@ -1,22 +1,16 @@
-// Ponto de entrada da linha de comando `delprops` (realização node).
+// Ponto de entrada da linha de comando `delprops` na realização node.
 //
 // Uso:
 //     delegua fontes/ilc.delegua -- <comando> [argumentos]
 //
 // Se o diretório atual tiver `pacotes/` (instalados pela Pacoteca), os esquemas que os
 // pacotes declaram em `pacoteca.jsonc` são descobertos e somados aos embutidos.
-importar tudo como arquivos de "arquivos"
-importar tudo como cli de "./cli.delegua"
-importar tudo como descobridor de "./descobridor.delegua"
-importar tudo como registro de "./registro.delegua"
-importar tudo como sistemaArquivos de "./sistema_arquivos_node.delegua"
-importar tudo como sistemaCli de "./sistema_cli_node.delegua"
+// Na realização llvm, o ponto de entrada é fontes/ilc_llvm.delegua.
+importar tudo como argumentosProcesso de "argumentos"
+importar tudo como inicio de "./inicio_cli.delegua"
 
-var diretorioPacotes = arquivos.juntarCaminhos(arquivos.diretorioAtual(), "pacotes")
-var registroPacotes = registro.criarRegistro()
-var esquemasAdicionais = nulo
-se (descobridor.descobrir(diretorioPacotes, sistemaArquivos.sistemaArquivosNode(), registroPacotes) > 0) {
-    esquemasAdicionais = registroPacotes.obterEsquemas()
-}
+var argumentosCli: texto[] = []
+var todos: vetor = argumentosProcesso.argumentos
+para (var i = 0; i < todos.tamanho(); i = i + 1) { argumentosCli.adicionar("" + todos[i]) }
 
-cli.executarCli(sistemaCli.sistemaCliNode(), esquemasAdicionais)
+inicio.executarComPacotes(argumentosCli)

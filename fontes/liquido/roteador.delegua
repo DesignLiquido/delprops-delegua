@@ -1,16 +1,17 @@
 // Propriedades de liquido.roteador.*.
-importar tudo como modelos de "../modelos.delegua"
+importar { DefinicaoPropriedade } de "../modelos.delegua"
 
-funcao definicoes() {
-    retorna [
-        modelos.DefinicaoPropriedade("diretorioEstatico", "texto", "Caminho do diretório de arquivos estáticos.", "'publico'", nulo),
-        modelos.DefinicaoPropriedade("cors", "logico", "Habilita CORS.", "falso", nulo),
-        modelos.DefinicaoPropriedade("bodyParser", "logico", "Habilita o body-parser.", "verdadeiro", nulo),
-        modelos.DefinicaoPropriedade("morgan", "logico", "Habilita o log de requisições com morgan.", "falso", nulo),
-        modelos.DefinicaoPropriedade("cookieParser", "logico", "Habilita o cookie-parser.", "verdadeiro", nulo),
-        modelos.DefinicaoPropriedade("passport", "logico", "Habilita o passport para autenticação.", "falso", nulo),
-        modelos.DefinicaoPropriedade("json", "logico", "Habilita o suporte a JSON no body.", "verdadeiro", nulo),
-        modelos.DefinicaoPropriedade("helmet", "logico", "Habilita o helmet para segurança de cabeçalhos HTTP.", "verdadeiro", nulo),
-        modelos.DefinicaoPropriedade("porta", "numero", "Porta na qual o servidor irá subir.", "3000", nulo)
+funcao definicoes(): DefinicaoPropriedade[] {
+    var lista: DefinicaoPropriedade[] = [
+        DefinicaoPropriedade("diretorioEstatico", "texto", "Caminho do diretório de arquivos estáticos.", "'publico'", []),
+        DefinicaoPropriedade("cors", "logico", "Habilita CORS.", "falso", []),
+        DefinicaoPropriedade("bodyParser", "logico", "Habilita o body-parser.", "verdadeiro", []),
+        DefinicaoPropriedade("morgan", "logico", "Habilita o log de requisições com morgan.", "falso", []),
+        DefinicaoPropriedade("cookieParser", "logico", "Habilita o cookie-parser.", "verdadeiro", []),
+        DefinicaoPropriedade("passport", "logico", "Habilita o passport para autenticação.", "falso", []),
+        DefinicaoPropriedade("json", "logico", "Habilita o suporte a JSON no body.", "verdadeiro", []),
+        DefinicaoPropriedade("helmet", "logico", "Habilita o helmet para segurança de cabeçalhos HTTP.", "verdadeiro", []),
+        DefinicaoPropriedade("porta", "numero", "Porta na qual o servidor irá subir.", "3000", [])
     ]
+    retorna lista
 }

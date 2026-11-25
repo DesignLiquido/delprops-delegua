@@ -20,86 +20,116 @@ importar tudo como esquemasDelprops de "./esquemas.delegua"
 importar tudo como formatadores de "./formatadores.delegua"
 importar tudo como liquido de "./liquido.delegua"
 importar tudo como cli de "./cli.delegua"
-importar tudo como sistemaArquivos de "./sistema_arquivos_node.delegua"
-importar tudo como sistemaCli de "./sistema_cli_node.delegua"
+importar tudo como sistemaArquivos de "./sistema_arquivos.delegua"
+importar tudo como sistemaCli de "./sistema_cli.delegua"
+importar {
+    DefinicaoPropriedade,
+    ErroCompreensao,
+    ErroValidacao,
+    ItemInfo,
+    PropriedadeCompreendida,
+    ResultadoCompreensao,
+    ResultadoValidacao,
+    SistemaArquivosDescoberta,
+    SistemaCli
+} de "./modelos.delegua"
+importar { ResultadoEsquemas } de "./esquemas.delegua"
+importar { RegistroEsquemas } de "./registro.delegua"
+importar { SistemaArquivosLocal } de "./sistema_arquivos.delegua"
+importar { SistemaCliLocal } de "./sistema_cli.delegua"
+importar { ValorJson } de "./utilidades/json.delegua"
 
-funcao versao() { retorna cli.versao() }
+funcao versao(): texto { retorna cli.versao() }
 
 // ── Tipos e definições ──
 
-funcao tiposValor() { retorna tiposDelprops.tiposValor() }
+funcao tiposValor(): texto[] { retorna tiposDelprops.tiposValor() }
 
-// Cria uma definição de propriedade. `valorPadrao` e `valoresPermitidos` podem ser nulo.
-funcao definicaoPropriedade(nome, tipoValor, detalhe, valorPadrao, valoresPermitidos) {
-    retorna modelos.DefinicaoPropriedade(nome, tipoValor, detalhe, valorPadrao, valoresPermitidos)
+// Cria uma definição de propriedade. `valorPadrao` vazio indica que não há padrão;
+// `valoresPermitidos` vazio aceita qualquer valor.
+funcao definicaoPropriedade(
+    nome: texto,
+    tipoValor: texto,
+    detalhe: texto,
+    valorPadrao: texto,
+    valoresPermitidos: texto[]
+): DefinicaoPropriedade {
+    retorna DefinicaoPropriedade(nome, tipoValor, detalhe, valorPadrao, valoresPermitidos)
 }
 
-// Cria uma definição a partir de um dicionário { nome, tipo, detalhe, padrao?, valoresPermitidos? }.
-funcao definicaoDeDicionario(dados) { retorna modelos.definicaoDeDicionario(dados) }
+// Cria uma definição a partir de um objeto JSON { nome, tipo, detalhe, padrao?, valoresPermitidos? }.
+funcao definicaoDeJson(dados: ValorJson): DefinicaoPropriedade { retorna modelos.definicaoDeJson(dados) }
 
-funcao definicoesDeVetor(dados) { retorna modelos.definicoesDeVetor(dados) }
+funcao definicoesDeJson(dados: ValorJson): DefinicaoPropriedade[] { retorna modelos.definicoesDeJson(dados) }
 
 // ── Análise e validação ──
 
 // Devolve um ResultadoCompreensao { propriedades, erros }.
-funcao analisar(conteudo) { retorna analisador.analisar(conteudo) }
+funcao analisar(conteudo: texto): ResultadoCompreensao { retorna analisador.analisar(conteudo) }
 
 // Devolve um ResultadoValidacao { avisos, erros }.
-funcao validar(propriedades, esquemas) { retorna validador.validar(propriedades, esquemas) }
+funcao validar(propriedades: PropriedadeCompreendida[], esquemas: dicionário): ResultadoValidacao {
+    retorna validador.validar(propriedades, esquemas)
+}
 
 // Analisa e valida o conteúdo de um arquivo .delprops de uma vez. Os erros de compreensão
 // (sintaxe, chaves duplicadas) entram como erros de validação com chave vazia.
-funcao validarConteudo(conteudo, esquemas) {
-    var compreendido = analisador.analisar(conteudo)
-    var resultado = validador.validar(compreendido.propriedades, esquemas)
+funcao validarConteudo(conteudo: texto, esquemas: dicionário): ResultadoValidacao {
+    var compreendido: ResultadoCompreensao = analisador.analisar(conteudo)
+    var resultado: ResultadoValidacao = validador.validar(compreendido.propriedades, esquemas)
     para (var i = 0; i < compreendido.erros.tamanho(); i = i + 1) {
-        var erro = compreendido.erros[i]
-        resultado.erros.adicionar(modelos.ErroValidacao("", erro.linha, erro.mensagem))
+        var erro: ErroCompreensao = compreendido.erros[i]
+        resultado.erros.adicionar(ErroValidacao("", erro.linha, erro.mensagem))
     }
     retorna resultado
 }
 
-funcao inferirTipo(valor) { retorna validador.inferirTipo(valor) }
+// Tipo inferido de um valor ("logico", "texto", "numero"), ou "" se desconhecido.
+funcao inferirTipo(valor: texto): texto { retorna validador.inferirTipo(valor) }
 
-funcao valorSemAspas(valor) { retorna validador.valorSemAspas(valor) }
+funcao valorSemAspas(valor: texto): texto { retorna validador.valorSemAspas(valor) }
 
 // ── Esquemas ──
 
 // Esquemas embutidos (liquido.*): espaço de nomes → vetor de DefinicaoPropriedade.
-funcao obterEsquemasEmbutidos() { retorna esquemasDelprops.obterEsquemasEmbutidos() }
+funcao obterEsquemasEmbutidos(): dicionário { retorna esquemasDelprops.obterEsquemasEmbutidos() }
 
 // Esquemas embutidos do Líquido, por espaço de nomes (mesmo conteúdo de obterEsquemasEmbutidos).
-funcao esquemasLiquido() { retorna liquido.esquemas() }
+funcao esquemasLiquido(): dicionário { retorna liquido.esquemas() }
 
-// Lê esquemas de um texto JSON/JSONC. Devolve { "esquemas": ..., "erro": "" }.
-funcao esquemasDeTexto(conteudo) { retorna esquemasDelprops.esquemasDeTexto(conteudo) }
+// Lê esquemas de um texto JSON/JSONC. Devolve um ResultadoEsquemas { esquemas, erro }.
+funcao esquemasDeTexto(conteudo: texto): ResultadoEsquemas { retorna esquemasDelprops.esquemasDeTexto(conteudo) }
 
-funcao mesclarEsquemas(base, adicionais) { esquemasDelprops.mesclarEsquemas(base, adicionais) }
+funcao mesclarEsquemas(base: dicionário, adicionais: dicionário) { esquemasDelprops.mesclarEsquemas(base, adicionais) }
 
 // ── Registro e descoberta ──
 
 // Cria um RegistroEsquemas vazio (registrar, obter, temRegistro, obterTodos, obterEsquemas).
-funcao criarRegistro() { retorna registroDelprops.criarRegistro() }
+funcao criarRegistro(): RegistroEsquemas { retorna registroDelprops.criarRegistro() }
 
 // Registra no `registro` os esquemas declarados pelos pacotes em `diretorioPacotes`.
 // Devolve a quantidade de contribuições registradas.
-funcao descobrir(diretorioPacotes, sistema, registro) {
+funcao descobrir(diretorioPacotes: texto, sistema: SistemaArquivosDescoberta, registro: RegistroEsquemas): inteiro {
     retorna descobridor.descobrir(diretorioPacotes, sistema, registro)
 }
 
-// Sistema de arquivos de descoberta da realização node.
-funcao sistemaArquivosNode() { retorna sistemaArquivos.sistemaArquivosNode() }
+// Sistema de arquivos de descoberta sobre a biblioteca `arquivos`.
+funcao sistemaArquivosLocal(): SistemaArquivosLocal { retorna sistemaArquivos.sistemaArquivosLocal() }
 
 // ── Formatação e linha de comando ──
 
-funcao formatarValidacao(resultado) { retorna formatadores.formatarValidacao(resultado) }
-funcao formatarCompreensao(resultado) { retorna formatadores.formatarCompreensao(resultado) }
-funcao formatarEsquemas(esquemas) { retorna formatadores.formatarEsquemas(esquemas) }
-funcao formatarInfo(resultados) { retorna formatadores.formatarInfo(resultados) }
-funcao formatarAjuda() { retorna formatadores.formatarAjuda() }
+funcao formatarValidacao(resultado: ResultadoValidacao): texto { retorna formatadores.formatarValidacao(resultado) }
+funcao formatarCompreensao(resultado: ResultadoCompreensao): texto { retorna formatadores.formatarCompreensao(resultado) }
+funcao formatarEsquemas(esquemas: dicionário): texto { retorna formatadores.formatarEsquemas(esquemas) }
+funcao formatarInfo(resultados: ItemInfo[]): texto { retorna formatadores.formatarInfo(resultados) }
+funcao formatarAjuda(): texto { retorna formatadores.formatarAjuda() }
 
-// Executa a linha de comando com o sistema dado. Devolve o código de saída.
-funcao executarCli(sistema, esquemasAdicionais) { retorna cli.executarCli(sistema, esquemasAdicionais) }
+// Executa a linha de comando com o sistema dado. `esquemasAdicionais` pode ser vazio.
+// Devolve o código de saída.
+funcao executarCli(sistema: SistemaCli, esquemasAdicionais: dicionário): inteiro {
+    retorna cli.executarCli(sistema, esquemasAdicionais)
+}
 
-// Sistema da linha de comando da realização node (argumentos do processo atual).
-funcao sistemaCliNode() { retorna sistemaCli.sistemaCliNode() }
+// Sistema da linha de comando sobre as bibliotecas `arquivos` e `processo`, com os
+// argumentos dados (sem o interpretador e o programa).
+funcao sistemaCliLocal(argumentos: texto[]): SistemaCliLocal { retorna sistemaCli.sistemaCliLocal(argumentos) }
